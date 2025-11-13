@@ -1,0 +1,259 @@
+import { create } from "zustand";
+import { BASE_HP, MATCH_SEC, SCORE_BY_DIFF } from "../config/balance";
+import { stepGame } from "./gameSim";
+
+export type GameMode = "tutorial1" | "ai1" | "ai2" | "pvp2";
+export type QuizPending = { diff: number; lane: number } | null;
+export type QuizResult = {
+    correct: boolean;
+    diff: number;
+    lane: number;
+    questionId: string;
+};
+export type Side = "ally" | "enemy";
+
+export type UnitEnt = {
+    id: string;
+    diff: number;
+    lane: number;
+    side: Side;
+
+    x: number;
+    y: number;
+    zOrder: number;
+    speed: number;   // 기본 이동 속도 (ally: +, enemy: -)
+    moving: boolean; // 이동 중인지 여부
+
+    radius: number; // 충돌 박스 반쪽 (AABB 용)
+    range: number;  // 공격 사거리(원형)
+    radar: number;  // 탐지 사거리(원형, 넉넉하게)
+
+    hp: number;
+    atk: number;    // 초당 공격력
+
+    // AI용 필드
+    targetId: string | null;
+    scanCd: number; // 레이더 스캔까지 남은 시간(sec)
+};
+
+export type GameState = {
+    // core
+    paused: boolean;
+    tickCount: number;
+    gameMode: GameMode;
+    laneCount: number;
+
+    // match
+    baseAlly: number;
+    baseEnemy: number;
+    scoreAlly: number;
+    scoreEnemy: number;
+    timeSec: number;
+    maxSec: number;
+    ended: boolean;
+
+    // quiz
+    quizOpen: boolean;
+    pending: QuizPending;
+    lastResult: QuizResult | null;
+
+    // units
+    units: UnitEnt[];
+
+    // actions
+    setPaused: (v: boolean) => void;
+    tick: () => void;
+    setGameMode: (m: GameMode) => void;
+    setLaneCount: (n: number) => void;
+
+    openQuiz: (diff: number, lane: number) => void;
+    closeQuiz: () => void;
+    onQuizResult: (r: QuizResult) => void;
+
+    startMatch: (maxSec?: number) => void;
+    resetMatch: (maxSec?: number) => void;
+    endMatch: () => void;
+
+    spawn: (diff: number, lane: number, side?: Side) => void;
+    advance: (dtSec: number, stageWidth: number, stageHeight: number) => void;
+};
+
+function lanesForMode(m: GameMode): number {
+    switch (m) {
+        case "tutorial1":
+        case "ai1":
+            return 1;
+        case "ai2":
+        case "pvp2":
+            return 2;
+    }
+}
+
+function clampDiff(diff: number): number {
+    return Math.max(1, Math.min(6, diff));
+}
+
+// diff별 기본 스탯 정의
+function makeUnitStats(diff: number) {
+    const d = clampDiff(diff);
+    const hp = 60 + d * 30;        // 90~240
+    const atk = 8 + d * 4;         // 12~32
+    const radius = 14;             // 유닛 반쪽 크기
+    const range = 60 + d * 8;      // 공격 사거리(원형)
+    const radar = 1200;            // ★ 탐지 사거리: 넉넉하게 통일
+    return { hp, atk, radius, range, radar };
+}
+
+let gSpawnSeq = 0;
+
+export const useGameStore = create<GameState>((set, get) => ({
+    // core
+    paused: false,
+    tickCount: 0,
+    gameMode: "tutorial1",
+    laneCount: 1,
+
+    // match
+    baseAlly: BASE_HP,
+    baseEnemy: BASE_HP,
+    scoreAlly: 0,
+    scoreEnemy: 0,
+    timeSec: 0,
+    maxSec: MATCH_SEC,
+    ended: false,
+
+    // quiz
+    quizOpen: false,
+    pending: null,
+    lastResult: null,
+
+    // units
+    units: [],
+
+    // ===== core actions =====
+    setPaused: (v) => set({ paused: v }),
+    tick: () => set((s) => ({ tickCount: s.tickCount + 1 })),
+
+    setGameMode: (m) =>
+        set(() => ({
+            gameMode: m,
+            laneCount: lanesForMode(m),
+            quizOpen: false,
+            pending: null,
+        })),
+
+    setLaneCount: (n) => set({ laneCount: Math.max(1, Math.floor(n)) }),
+
+    // ===== quiz actions =====
+    openQuiz: (diff, lane) => set({ quizOpen: true, pending: { diff, lane } }),
+    closeQuiz: () => set({ quizOpen: false, pending: null }),
+
+    onQuizResult: (r) => {
+        if (r.correct) {
+            get().spawn(r.diff, r.lane, "ally");
+        }
+        return set({ lastResult: r, quizOpen: false, pending: null });
+    },
+
+    // ===== match lifecycle =====
+    startMatch: (maxSec) =>
+        set({
+            paused: false,
+            ended: false,
+            timeSec: 0,
+            maxSec: typeof maxSec === "number" ? maxSec : MATCH_SEC,
+        }),
+
+    resetMatch: (maxSec) =>
+        set({
+            paused: false,
+            ended: false,
+            timeSec: 0,
+            maxSec: typeof maxSec === "number" ? maxSec : MATCH_SEC,
+            baseAlly: BASE_HP,
+            baseEnemy: BASE_HP,
+            scoreAlly: 0,
+            scoreEnemy: 0,
+            units: [],
+        }),
+
+    endMatch: () => set({ paused: true, ended: true }),
+
+    // ===== unit spawn =====
+    // 점수: 소환 시 확정, 위치: 레인 안에서 Y 랜덤
+    spawn: (diff, lane, side = "ally") =>
+        set((s) => {
+            const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+            const d = clampDiff(diff);
+            const { hp, atk, radius, range, radar } = makeUnitStats(d);
+
+            const baseSpeed = 90 + d * 18;
+            const speed = side === "ally" ? baseSpeed : -baseSpeed;
+
+            const stageWidth =
+                typeof (globalThis as any)._stageWidth === "number"
+                    ? (globalThis as any)._stageWidth
+                    : 800;
+
+            const stageHeight =
+                typeof (globalThis as any)._stageHeight === "number"
+                    ? (globalThis as any)._stageHeight
+                    : 400;
+
+            const L = Math.max(1, s.laneCount || 1);
+            const laneIdx = Math.max(0, Math.min(L - 1, lane));
+            const laneH = stageHeight / L;
+
+            const y0 = laneH * laneIdx;
+            const y1 = laneH * (laneIdx + 1);
+
+            const midY = (y0 + y1) / 2;
+            const jitterRange = laneH * 0.4;
+            let y = midY + (Math.random() - 0.5) * jitterRange;
+
+            // 레인 안쪽으로 클램프
+            const innerTop = y0 + 8 + radius;
+            const innerBottom = y1 - 8 - radius;
+            if (innerBottom > innerTop) {
+                y = Math.max(innerTop, Math.min(innerBottom, y));
+            }
+
+            const startX = side === "ally" ? 16 : stageWidth - 16;
+
+            // 소환 시점에 점수 확정
+            const idx = d - 1;
+            const sc = SCORE_BY_DIFF[idx];
+            const scoreAlly = side === "ally" ? s.scoreAlly + sc : s.scoreAlly;
+            const scoreEnemy = side === "enemy" ? s.scoreEnemy + sc : s.scoreEnemy;
+
+            const u: UnitEnt = {
+                id,
+                diff: d,
+                lane: laneIdx,
+                side,
+                x: startX,
+                y,
+                zOrder: gSpawnSeq++,
+                speed,
+                moving: true,
+                radius,
+                range,
+                radar,
+                hp,
+                atk,
+                targetId: null,
+                scanCd: 0,
+            };
+
+            return {
+                units: [...s.units, u],
+                scoreAlly,
+                scoreEnemy,
+            };
+        }),
+
+    // ===== advance: 순수 시뮬레이션 함수 호출 =====
+    advance: (dtSec, stageWidth, stageHeight) =>
+        set((s) => stepGame(s, dtSec, stageWidth, stageHeight)),
+}));

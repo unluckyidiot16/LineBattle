@@ -1,0 +1,1185 @@
+[
+  {
+    "question": "세계에서 가장 큰 대륙은 어디인가요?",
+    "options": [
+      "아프리카",
+      "아시아",
+      "북아메리카",
+      "유럽"
+    ],
+    "answer": 1,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "세계에서 가장 큰 바다는 어디인가요?",
+    "options": [
+      "대서양",
+      "인도양",
+      "북극해",
+      "태평양"
+    ],
+    "answer": 3,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "6대주에 속하지 *않는* 것은 무엇인가요?",
+    "options": [
+      "아시아",
+      "유럽",
+      "남극",
+      "오세아니아"
+    ],
+    "answer": 2,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "아시아 대륙에 대한 설명으로 *틀린* 것은?",
+    "options": [
+      "세계에서 가장 넓은 대륙이다",
+      "세계에서 인구가 가장 많은 대륙이다",
+      "세계에서 가장 긴 강(나일강)이 있다",
+      "우리나라가 속해 있는 대륙이다"
+    ],
+    "answer": 2,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 20
+  },
+  {
+    "question": "오세아니아 대륙을 대표하는 나라는?",
+    "options": [
+      "이집트",
+      "브라질",
+      "오스트레일리아",
+      "캐나다"
+    ],
+    "answer": 2,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "아마존 열대 우림이 주로 위치한 대륙은?",
+    "options": [
+      "아시아",
+      "아프리카",
+      "남아메리카",
+      "북아메리카"
+    ],
+    "answer": 2,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "캥거루와 코알라의 고향으로 유명한 대륙은?",
+    "options": [
+      "아프리카",
+      "오세아니아",
+      "남아메리카",
+      "유럽"
+    ],
+    "answer": 1,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "이집트의 피라미드와 스핑크스가 있는 대륙은?",
+    "options": [
+      "아시아",
+      "유럽",
+      "아프리카",
+      "북아메리카"
+    ],
+    "answer": 2,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "세계에서 가장 작은 대륙은 어디인가요?",
+    "options": [
+      "유럽",
+      "오세아니아",
+      "남아메리카",
+      "북아메리카"
+    ],
+    "answer": 1,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "1년 내내 눈과 얼음으로 덮여있고 펭귄이 사는 추운 땅은?",
+    "options": [
+      "북극",
+      "시베리아",
+      "남극 대륙",
+      "그린란드"
+    ],
+    "answer": 2,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 15
+  },
+  {
+    "question": "세계에서 가장 인구가 적은 대륙은?",
+    "options": [
+      "오세아니아",
+      "남아메리카",
+      "유럽",
+      "북아메리카"
+    ],
+    "answer": 0,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "지구의 육지를 크게 나눈 6개의 큰 땅덩어리를 무엇이라고 하나요?",
+    "options": [
+      "6대륙",
+      "5대양",
+      "6대주",
+      "5대주"
+    ],
+    "answer": 2,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "지구의 바다를 크게 나눈 5개의 큰 바다를 무엇이라고 하나요?",
+    "options": [
+      "6대륙",
+      "5대양",
+      "6대주",
+      "5대주"
+    ],
+    "answer": 1,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "세계에서 가장 작은 바다는?",
+    "options": [
+      "남극해",
+      "북극해",
+      "인도양",
+      "대서양"
+    ],
+    "answer": 1,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "다음 중 5대양에 속하지 않는 바다는?",
+    "options": [
+      "태평양",
+      "대서양",
+      "지중해",
+      "인도양"
+    ],
+    "answer": 2,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "다음 중 6대주에 속하지 않는 대륙은?",
+    "options": [
+      "아시아",
+      "아프리카",
+      "그린란드",
+      "유럽"
+    ],
+    "answer": 2,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "지구본의 장점이 *아닌* 것은 무엇인가요?",
+    "options": [
+      "실제 지구의 모습을 축소함",
+      "대륙과 바다의 크기 비교가 쉬움",
+      "한눈에 전 세계를 볼 수 있음",
+      "위치와 거리를 비교적 정확하게 표시함"
+    ],
+    "answer": 2,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 20
+  },
+  {
+    "question": "디지털 영상 지도의 특징으로 *틀린* 것은?",
+    "options": [
+      "정보를 쉽게 수정하고 추가할 수 있다",
+      "원하는 장소를 확대/축소하기 어렵다",
+      "위성 사진을 통해 실제 모습을 볼 수 있다",
+      "길 찾기, 거리 측정 등 다양한 기능이 있다"
+    ],
+    "answer": 1,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 20
+  },
+  {
+    "question": "지도에서 땅의 높낮이를 같은 지점끼리 연결한 선은?",
+    "options": [
+      "등고선",
+      "위선",
+      "경선",
+      "해안선"
+    ],
+    "answer": 0,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "지도에서 실제 거리를 줄인 비율을 무엇이라고 하나요?",
+    "options": [
+      "축척",
+      "범례",
+      "방위",
+      "등고선"
+    ],
+    "answer": 0,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "지도에서 기호를 설명해 놓은 부분은?",
+    "options": [
+      "축척",
+      "범례",
+      "방위",
+      "등고선"
+    ],
+    "answer": 1,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "지도의 위쪽이 항상 가리키는 방향은?",
+    "options": [
+      "동",
+      "서",
+      "남",
+      "북"
+    ],
+    "answer": 3,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "지구본에서 가로로 그어진 선을 무엇이라고 하나요?",
+    "options": [
+      "위선",
+      "경선",
+      "적도",
+      "본초 자오선"
+    ],
+    "answer": 0,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "지구본에서 세로로 그어진 선을 무엇이라고 하나요?",
+    "options": [
+      "위선",
+      "경선",
+      "적도",
+      "날짜 변경선"
+    ],
+    "answer": 1,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "위선의 기준이 되며 위도 0도인 선은?",
+    "options": [
+      "북회귀선",
+      "남회귀선",
+      "본초 자오선",
+      "적도"
+    ],
+    "answer": 3,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "경선의 기준이 되며 경도 0도인 선(영국 그리니치 천문대)은?",
+    "options": [
+      "적도",
+      "본초 자오선",
+      "날짜 변경선",
+      "남회귀선"
+    ],
+    "answer": 1,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 20
+  },
+  {
+    "question": "우리나라는 적도를 기준으로 어느 쪽에 위치하나요?",
+    "options": [
+      "북쪽 (북반구)",
+      "남쪽 (남반구)",
+      "적도 위",
+      "알 수 없음"
+    ],
+    "answer": 0,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "1년 내내 덥고 비가 많이 내리는 기후는?",
+    "options": [
+      "열대 기후",
+      "온대 기후",
+      "한대 기후",
+      "건조 기후"
+    ],
+    "answer": 0,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "사계절이 뚜렷하게 나타나는 기후는?",
+    "options": [
+      "열대 기후",
+      "온대 기후",
+      "한대 기후",
+      "고산 기후"
+    ],
+    "answer": 1,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "1년 내내 춥고, 사람들이 순록을 기르며 사는 기후는?",
+    "options": [
+      "열대 기후",
+      "건조 기후",
+      "한대 기후",
+      "온대 기후"
+    ],
+    "answer": 2,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 20
+  },
+  {
+    "question": "밀, 옥수수 등 농사를 짓기에 가장 적합하고 사계절이 뚜렷한 기후는?",
+    "options": [
+      "온대 기후",
+      "열대 기후",
+      "한대 기후",
+      "건조 기후"
+    ],
+    "answer": 0,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "사막이 넓게 나타나고, 강수량이 매우 적은 기후는?",
+    "options": [
+      "열대 기후",
+      "고산 기후",
+      "냉대 기후",
+      "건조 기후"
+    ],
+    "answer": 3,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "지중해 연안에서 주로 나타나며, 여름이 덥고 건조한 기후는?",
+    "options": [
+      "열대 우림 기후",
+      "지중해성 기후",
+      "툰드라 기후",
+      "사막 기후"
+    ],
+    "answer": 1,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 20
+  },
+  {
+    "question": "포도, 올리브 등을 많이 재배하는 기후는?",
+    "options": [
+      "열대 기후",
+      "한대 기후",
+      "지중해성 기후",
+      "냉대 기후"
+    ],
+    "answer": 2,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "북극곰이 사는 곳으로 매우 추운 기후 지역은?",
+    "options": [
+      "한대 기후",
+      "냉대 기후",
+      "고산 기후",
+      "온대 기후"
+    ],
+    "answer": 0,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "우리나라처럼 뚜렷한 사계절이 나타나는 기후는?",
+    "options": [
+      "열대 기후",
+      "냉대 기후",
+      "온대 기후",
+      "건조 기후"
+    ],
+    "answer": 2,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "1년 내내 기온이 높고, 비가 오는 계절과 오지 않는 계절이 뚜렷한 기후는?",
+    "options": [
+      "사바나 기후",
+      "지중해성 기후",
+      "사막 기후",
+      "툰드라 기후"
+    ],
+    "answer": 0,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 20
+  },
+  {
+    "question": "해발 고도가 높아 1년 내내 봄처럼 선선한 기후는?",
+    "options": [
+      "고산 기후",
+      "냉대 기후",
+      "한대 기후",
+      "사막 기후"
+    ],
+    "answer": 0,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "산, 강, 바다, 날씨처럼 자연 그대로의 환경을 무엇이라고 하나요?",
+    "options": [
+      "자연 환경",
+      "인문 환경",
+      "사회 환경",
+      "도시 환경"
+    ],
+    "answer": 0,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 15
+  },
+  {
+    "question": "사람들이 만든 도시, 건물, 도로, 다리 등을 무엇이라고 하나요?",
+    "options": [
+      "자연 환경",
+      "인문 환경",
+      "문화 환경",
+      "지리 환경"
+    ],
+    "answer": 1,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 15
+  },
+  {
+    "question": "인문 환경에 해당하는 것을 고르세요.",
+    "options": [
+      "사막",
+      "높은 산",
+      "논과 밭",
+      "계절풍"
+    ],
+    "answer": 2,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "자연 환경에 해당하는 것을 고르세요.",
+    "options": [
+      "공장",
+      "아파트",
+      "계절풍",
+      "다리"
+    ],
+    "answer": 2,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "열대 기후 지역의 전통 가옥이 개방적인 이유는?",
+    "options": [
+      "나무가 많아서",
+      "춥고 눈이 많이 와서",
+      "바람이 잘 통하고 시원하게",
+      "동물의 침입을 막기 위해"
+    ],
+    "answer": 2,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 20
+  },
+  {
+    "question": "한대 기후 지역의 가옥이 폐쇄적이고 창이 작은 이유는?",
+    "options": [
+      "나무가 부족해서",
+      "추위를 막고 열을 보존하기 위해",
+      "비가 많이 와서",
+      "햇빛이 너무 강해서"
+    ],
+    "answer": 1,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 20
+  },
+  {
+    "question": "건조 기후 지역에서 집을 흙벽돌로 짓는 이유는?",
+    "options": [
+      "흙이 많아서",
+      "나무가 없어서",
+      "비가 자주 와서",
+      "낮의 열기를 막고 밤의 추위를 막기 위해"
+    ],
+    "answer": 3,
+    "difficulty": "hard",
+    "reward": 150,
+    "time": 25
+  },
+  {
+    "question": "우리나라의 이웃 나라가 *아닌* 곳은?",
+    "options": [
+      "중국",
+      "일본",
+      "러시아",
+      "베트남"
+    ],
+    "answer": 3,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "일본의 수도는 어디인가요?",
+    "options": [
+      "베이징",
+      "도쿄",
+      "오사카",
+      "모스크바"
+    ],
+    "answer": 1,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "세계에서 영토가 가장 넓은 나라는?",
+    "options": [
+      "중국",
+      "캐나다",
+      "미국",
+      "러시아"
+    ],
+    "answer": 3,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "우리나라(대한민국)의 수도는 어디인가요?",
+    "options": [
+      "부산",
+      "인천",
+      "평양",
+      "서울"
+    ],
+    "answer": 3,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "중국의 수도는 어디인가요?",
+    "options": [
+      "상하이",
+      "홍콩",
+      "베이징",
+      "톈진"
+    ],
+    "answer": 2,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "러시아의 수도는 어디인가요?",
+    "options": [
+      "상트페테르부르크",
+      "키이우",
+      "블라디보스토크",
+      "모스크바"
+    ],
+    "answer": 3,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "세계에서 가장 긴 강은?",
+    "options": [
+      "아마존강",
+      "나일강",
+      "미시시피강",
+      "양쯔강"
+    ],
+    "answer": 1,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "알프스산맥과 관련이 깊은 대륙은 어디인가요?",
+    "options": [
+      "아시아",
+      "유럽",
+      "북아메리카",
+      "아프리카"
+    ],
+    "answer": 1,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "미국의 수도는 어디인가요?",
+    "options": [
+      "뉴욕",
+      "로스앤젤레스",
+      "워싱턴 D.C.",
+      "시카고"
+    ],
+    "answer": 2,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "영국의 수도는 어디인가요?",
+    "options": [
+      "파리",
+      "로마",
+      "베를린",
+      "런던"
+    ],
+    "answer": 3,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "프랑스의 수도는 어디인가요?",
+    "options": [
+      "파리",
+      "리옹",
+      "마르세유",
+      "니스"
+    ],
+    "answer": 0,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "이탈리아의 수도는 어디인가요?",
+    "options": [
+      "밀라노",
+      "나폴리",
+      "로마",
+      "피렌체"
+    ],
+    "answer": 2,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "캐나다의 수도는 어디인가요?",
+    "options": [
+      "토론토",
+      "밴쿠버",
+      "몬트리올",
+      "오타와"
+    ],
+    "answer": 3,
+    "difficulty": "hard",
+    "reward": 150,
+    "time": 20
+  },
+  {
+    "question": "오스트레일리아(호주)의 수도는 어디인가요?",
+    "options": [
+      "시드니",
+      "멜버른",
+      "캔버라",
+      "브리즈번"
+    ],
+    "answer": 2,
+    "difficulty": "hard",
+    "reward": 150,
+    "time": 20
+  },
+  {
+    "question": "브라질의 수도는 어디인가요?",
+    "options": [
+      "리우데자네이루",
+      "상파울루",
+      "브라질리아",
+      "사우바도르"
+    ],
+    "answer": 2,
+    "difficulty": "hard",
+    "reward": 150,
+    "time": 20
+  },
+  {
+    "question": "이집트의 수도는 어디인가요?",
+    "options": [
+      "알렉산드리아",
+      "카이로",
+      "기자",
+      "룩소르"
+    ],
+    "answer": 1,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "인도의 수도는 어디인가요?",
+    "options": [
+      "뭄바이",
+      "콜카타",
+      "뉴델리",
+      "벵갈루루"
+    ],
+    "answer": 2,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "우리나라가 여름일 때, 오스트레일리아(호주)는 어떤 계절인가요?",
+    "options": [
+      "여름",
+      "가을",
+      "겨울",
+      "봄"
+    ],
+    "answer": 2,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "석유가 많이 생산되는 지역은?",
+    "options": [
+      "유럽",
+      "북극",
+      "서남아시아(중동)",
+      "동남아시아"
+    ],
+    "answer": 2,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "로키산맥이 위치한 대륙은?",
+    "options": [
+      "북아메리카",
+      "남아메리카",
+      "아프리카",
+      "유럽"
+    ],
+    "answer": 0,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "안데스산맥이 위치한 대륙은?",
+    "options": [
+      "북아메리카",
+      "남아메리카",
+      "아시아",
+      "오세아니아"
+    ],
+    "answer": 1,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "세계의 지붕이라고 불리는 고원은?",
+    "options": [
+      "티베트고원",
+      "콜로라도고원",
+      "이란고원",
+      "브라질고원"
+    ],
+    "answer": 0,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "다음 중 섬나라는?",
+    "options": [
+      "이탈리아",
+      "태국",
+      "일본",
+      "베트남"
+    ],
+    "answer": 2,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "독일의 수도는 어디인가요?",
+    "options": [
+      "뮌헨",
+      "함부르크",
+      "프랑크푸르트",
+      "베를린"
+    ],
+    "answer": 3,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "스페인의 수도는 어디인가요?",
+    "options": [
+      "바르셀로나",
+      "마드리드",
+      "세비야",
+      "발렌시아"
+    ],
+    "answer": 1,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "베트남의 수도는 어디인가요?",
+    "options": [
+      "호찌민",
+      "다낭",
+      "하노이",
+      "후에"
+    ],
+    "answer": 2,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "태국의 수도는 어디인가요?",
+    "options": [
+      "방콕",
+      "치앙마이",
+      "푸껫",
+      "파타야"
+    ],
+    "answer": 0,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "아르헨티나의 수도는 어디인가요?",
+    "options": [
+      "부에노스아이레스",
+      "산티아고",
+      "리마",
+      "보고타"
+    ],
+    "answer": 0,
+    "difficulty": "hard",
+    "reward": 150,
+    "time": 20
+  },
+  {
+    "question": "케냐의 수도는 어디인가요?",
+    "options": [
+      "라고스",
+      "나이로비",
+      "카이로",
+      "케이프타운"
+    ],
+    "answer": 1,
+    "difficulty": "hard",
+    "reward": 150,
+    "time": 20
+  },
+  {
+    "question": "적도 부근에 위치한 나라들의 기후는?",
+    "options": [
+      "열대 기후",
+      "한대 기후",
+      "온대 기후",
+      "건조 기후"
+    ],
+    "answer": 0,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "북극이나 남극에 가까운 나라들의 기후는?",
+    "options": [
+      "열대 기후",
+      "한대 기후",
+      "온대 기후",
+      "건조 기후"
+    ],
+    "answer": 1,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "세계 여러 나라의 전통 의상이 *아닌* 것은?",
+    "options": [
+      "한복(한국)",
+      "기모노(일본)",
+      "치파오(중국)",
+      "청바지(미국)"
+    ],
+    "answer": 3,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "인도의 여성들이 입는 전통 의상은?",
+    "options": [
+      "사리",
+      "아오자이",
+      "한푸",
+      "하카마"
+    ],
+    "answer": 0,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "베트남의 여성이 입는 긴 전통 의상은?",
+    "options": [
+      "사리",
+      "아오자이",
+      "치파오",
+      "기모노"
+    ],
+    "answer": 1,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "스코틀랜드 남성들이 입는 체크무늬 치마는?",
+    "options": [
+      "킬트",
+      "판초",
+      "로인클로스",
+      "토가"
+    ],
+    "answer": 0,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "밀을 주식으로 하는 지역에서 주로 먹는 음식은?",
+    "options": [
+      "빵",
+      "쌀밥",
+      "감자",
+      "옥수수"
+    ],
+    "answer": 0,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "쌀을 주식으로 하는 지역은 주로 어디인가요?",
+    "options": [
+      "유럽",
+      "아시아",
+      "북아메리카",
+      "오세아니아"
+    ],
+    "answer": 1,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "이탈리아의 대표적인 음식으로 *틀린* 것은?",
+    "options": [
+      "피자",
+      "파스타",
+      "스시",
+      "라자냐"
+    ],
+    "answer": 2,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "일본의 대표적인 음식으로, 식초로 간을 한 밥에 생선 등을 얹은 것은?",
+    "options": [
+      "라멘",
+      "스시",
+      "카레",
+      "돈카츠"
+    ],
+    "answer": 1,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "멕시코의 대표적인 음식으로, 토르티야에 고기, 채소 등을 싸 먹는 것은?",
+    "options": [
+      "타코",
+      "파에야",
+      "부리토",
+      "나초"
+    ],
+    "answer": 0,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 15
+  },
+  {
+    "question": "우리나라의 대표적인 발효 음식은?",
+    "options": [
+      "피자",
+      "김치",
+      "스시",
+      "빵"
+    ],
+    "answer": 1,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  },
+  {
+    "question": "더운 기후 지역의 전통 의상 특징은?",
+    "options": [
+      "털가죽 옷",
+      "몸에 붙는 옷",
+      "얇고 헐렁한 옷",
+      "검은색 옷"
+    ],
+    "answer": 2,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 15
+  },
+  {
+    "question": "추운 기후 지역의 전통 의상 특징은?",
+    "options": [
+      "털가죽 옷",
+      "얇은 면 옷",
+      "반팔, 반바지",
+      "헐렁한 옷"
+    ],
+    "answer": 0,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 15
+  },
+  {
+    "question": "건조 기후 지역에서 온몸을 감싸는 옷을 입는 이유는?",
+    "options": [
+      "멋을 내기 위해",
+      "강한 햇빛과 모래바람을 막기 위해",
+      "종교적인 이유로",
+      "추위를 막기 위해"
+    ],
+    "answer": 1,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 20
+  },
+  {
+    "question": "세계 여러 나라가 모여 평화와 안전을 논의하는 국제기구는?",
+    "options": [
+      "NATO (나토)",
+      "UN (국제 연합)",
+      "WHO (세계 보건 기구)",
+      "APEC (아시아 태평양 경제 협력체)"
+    ],
+    "answer": 1,
+    "difficulty": "medium",
+    "reward": 100,
+    "time": 20
+  },
+  {
+    "question": "4년마다 열리는 세계적인 스포츠 축제는?",
+    "options": [
+      "월드컵",
+      "동계 올림픽",
+      "하계 올림픽",
+      "아시안 게임"
+    ],
+    "answer": 2,
+    "difficulty": "easy",
+    "reward": 50,
+    "time": 10
+  }
+]
