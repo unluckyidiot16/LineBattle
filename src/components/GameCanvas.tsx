@@ -23,6 +23,7 @@ type UnitVisualState = {
     hitTimer: number;           //  피격 시 남은 점멸 시간(초)
     // ★ 힐 감지용 플래그
     justHealed: boolean;        // 이번 프레임에 힐을 받았는지 여부
+    lastHealFxTime: number;     // 마지막 힐 이펙트 시각
 };
 
 /**
@@ -135,16 +136,24 @@ export function GameCanvas() {
         let unitsLayer: PIXI.Container | null = null;
         let resizeObserver: ResizeObserver | null = null;
 
-        // ★ 힐 이펙트 생성 함수
-        function spawnHealEffect(x: number, y: number) {
+// ★ 힐 이펙트 생성 함수 (유닛 전체를 받도록 변경)
+        function spawnHealEffect(u: UnitEnt) {
             const layer = healLayerRef.current;
             const frames = healFramesRef.current;
             if (!layer || !frames || frames.length === 0) return;
 
             const spr = new PIXI.AnimatedSprite(frames);
+
+            // Pixi 스프라이트 앵커: 가운데 기준
             spr.anchor.set(0.5, 0.5);
-            spr.position.set(x, y - 24); // 유닛 머리 위 정도
-            spr.zIndex = y + 6000;
+
+            // radius 기준으로 머리 위 위치 계산
+            const HEAD_OFFSET = u.radius * 2.2; // 감으로 잡은 값, 필요하면 조절
+            const px = u.x;
+            const py = u.y - HEAD_OFFSET;
+
+            spr.position.set(px, py);
+            spr.zIndex = py + 6000; // y 기준으로 위에 쌓이게
             spr.scale.set(0.7);
             spr.animationSpeed = 0.4;
             spr.loop = false;
@@ -159,7 +168,8 @@ export function GameCanvas() {
             layer.addChild(spr);
             spr.play();
         }
-        
+
+
         // 내부 시간(초) – 애니메이션 락/스폰 딜레이 계산용
         let timeSec = 0;
 
@@ -178,19 +188,27 @@ export function GameCanvas() {
         ): AnimName {
             // 0) 피격 감지 → focus를 unit으로 전환
             vs.hitTimer = Math.max(0, vs.hitTimer - dtSec);
-            vs.justHealed = false;
-            
+
+            const HP_DELTA_EPS = 0.1;
             const deltaHp = u.hp - vs.lastHp;
-            
-            if (deltaHp < -0.01) {
-                // 데미지
+
+            // 1) 피격: HP 감소
+            if (deltaHp < -HP_DELTA_EPS) {
                 vs.focus = "unit";
-                vs.hitTimer = 0.12;  // 0.12초 동안 빨간 점멸
-            } else if (deltaHp > 0.01) {
-                // 힐
-                vs.justHealed = true;
+                vs.hitTimer = 0.12; // 피격 시 빨간 점멸
             }
+
+            // 2) 힐: HP 증가
+            if (deltaHp > HP_DELTA_EPS) {
+                const HEAL_FX_INTERVAL = 0.5; // 최소 0.5초 간격으로만 FX
+                if (timeSec - vs.lastHealFxTime > HEAL_FX_INTERVAL) {
+                    vs.justHealed = true;
+                    vs.lastHealFxTime = timeSec;
+                }
+            }
+
             vs.lastHp = u.hp;
+
 
             // 1) 스폰 직후 딜레이: 일정 시간 동안은 idle 고정
             const SPAWN_DELAY = 0.25; // 0.25초
@@ -320,6 +338,7 @@ export function GameCanvas() {
                         lockUntil: timeSec,
                         hitTimer: 0,
                         justHealed: false,
+                        lastHealFxTime: -999,
                     });
 
 
@@ -338,7 +357,9 @@ export function GameCanvas() {
                             lastAnim: "idle",
                             lockUntil: timeSec,
                             hitTimer: 0,
+                            
                             justHealed: false,
+                            lastHealFxTime: -999,
                         };
                         visualState.set(u.id, v);
                         return v;
@@ -368,8 +389,9 @@ export function GameCanvas() {
                 );
                 setUnitAnimation(sprite, kind, desiredAnim);
 
+                // 힐 이펙트: 이번 프레임에 힐 판정이 났으면 머리 위에 이펙트 1회
                 if (vs.justHealed) {
-                    spawnHealEffect(u.x, u.y);
+                    spawnHealEffect(u);
                 }
                 
             }
