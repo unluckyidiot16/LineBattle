@@ -319,7 +319,6 @@ export function GameCanvas() {
             const w = app.renderer.width;
             const h = app.renderer.height;
 
-            drawBoardFrame(lanesLayer, w, h);
             drawLanes(lanesLayer, w, h, laneCount);
 
             // ★ 게임 시뮬레이션 쪽에서 참조하는 전역 스테이지 크기
@@ -728,25 +727,11 @@ export function GameCanvas() {
 /**
  * 보드 바깥 테두리 등 기본 프레임
  */
+// ★ 전장 배경은 CSS / 타일맵으로 처리할 예정 → 보드용 사각형은 그리지 않음
 function drawBoardFrame(layer: PIXI.Container, w: number, h: number) {
-    const g = new PIXI.Graphics();
-
-    const padding = 24;
-    const rectW = Math.max(0, w - padding * 2);
-    const rectH = Math.max(0, h - padding * 2);
-
-    g.rect(padding, padding, rectW, rectH)
-        .fill({ color: 0x020617, alpha: 1 })
-        .stroke({ width: 2, color: 0x1f2937, alignment: 0 });
-
-    // 중앙 세로 라인 (양 진영 경계 느낌)
-    const midX = padding + rectW / 2;
-    g.moveTo(midX, padding)
-        .lineTo(midX, padding + rectH)
-        .stroke({ width: 1, color: 0x111827, alpha: 0.7 });
-
-    layer.addChild(g);
+    // no-op (이전 사각 렌더러 제거)
 }
+
 
 /**
  * 레인 구분선
