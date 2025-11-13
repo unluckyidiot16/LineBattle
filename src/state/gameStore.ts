@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { BASE_HP, MATCH_SEC, SCORE_BY_DIFF } from "../config/balance";
 import { stepGame } from "./gameSim";
+import { getUnitTemplateForDiff } from "../config/unitTemplates";
 
 export type GameMode = "tutorial1" | "ai1" | "ai2" | "pvp2";
 export type QuizPending = { diff: number; lane: number } | null;
@@ -26,6 +27,8 @@ export type ProjectileEnt = {
     life: number;     // 살아온 시간(sec)
     maxLife: number;  // 수명(sec)
 };
+
+export type UnitRole = "melee" | "ranged" | "healer";
 
 export type UnitEnt = {
     id: string;
@@ -53,7 +56,8 @@ export type UnitEnt = {
     // ★ 원거리 투사체 쿨다운 (sec)
     projCd: number;
 
-
+    role: UnitRole;
+    
     // ★ 기지를 공격 중인지 여부
     attackingBase: boolean;
 };
@@ -118,16 +122,6 @@ function clampDiff(diff: number): number {
     return Math.max(1, Math.min(6, diff));
 }
 
-// diff별 기본 스탯 정의
-function makeUnitStats(diff: number) {
-    const d = clampDiff(diff);
-    const hp = 60 + d * 30;        // 90~240
-    const atk = 8 + d * 4;         // 12~32
-    const radius = 14;             // 유닛 반쪽 크기
-    const range = 60 + d * 8;      // 공격 사거리(원형)
-    const radar = 1200;            // ★ 탐지 사거리: 넉넉하게 통일
-    return { hp, atk, radius, range, radar };
-}
 
 let gSpawnSeq = 0;
 
@@ -213,12 +207,22 @@ export const useGameStore = create<GameState>((set, get) => ({
     spawn: (diff, lane, side = "ally") =>
         set((s) => {
             const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-
             const d = clampDiff(diff);
-            const { hp, atk, radius, range, radar } = makeUnitStats(d);
+            const tpl = getUnitTemplateForDiff(d);
 
-            const baseSpeed = 90 + d * 18;
-            const speed = side === "ally" ? baseSpeed : -baseSpeed;
+            const {
+                maxHp,
+                atkPerSec,
+                radius,
+                range,
+                radar,
+                moveSpeed,
+                role,
+                healPerSec,
+                healRange,
+            } = tpl;
+
+            const speed = side === "ally" ? moveSpeed : -moveSpeed;
 
             // ★ Pixi가 기록한 실제 전장 크기 사용
             const stageWidth =
@@ -275,13 +279,19 @@ export const useGameStore = create<GameState>((set, get) => ({
                 radius,
                 range,
                 radar,
-                hp,
-                atk,
+                // 스탯
+                hp: maxHp,
+                atk: atkPerSec,
+                // AI 필드
                 targetId: null,
                 scanCd: 0,
                 projCd: 0,
+                // 역할 정보 (템플릿에서 가져온 값)
+                role,
+                // 기지 공격 상태
                 attackingBase: false,
             };
+
 
             return {
                 units: [...s.units, u],

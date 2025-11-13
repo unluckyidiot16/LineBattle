@@ -1,6 +1,7 @@
-// gameSim.ts
+// src/state/gameSim.ts
 import type { GameState, UnitEnt, ProjectileEnt } from "./gameStore";
-import { DMG_BY_DIFF } from "../config/balance";
+import { getUnitTemplateForDiff } from "../config/unitTemplates";
+
 
 // AI 설정
 const AI_SCAN_INTERVAL = 0.25; // 타겟 없을 때 레이더 스캔 주기(초)
@@ -18,12 +19,12 @@ function clampDiff(diff: number): number {
 // ─────────────────────────────
 // 투사체 설정
 // ─────────────────────────────
-const ARROW_SPEED = 520;          // 화살 속도(px/sec)
-const ARROW_FIRE_INTERVAL = 0.6;  // 한 유닛이 화살 쏘는 최소 간격(sec)
+const ARROW_SPEED = 520;
+const ARROW_FIRE_INTERVAL = 0.6;
 
-// 원거리 유닛 판정(임시 룰): diff 3 이상이면 원거리로 취급
+// 원거리 유닛 판정: 사거리 기반
 function isRangedUnit(u: UnitEnt): boolean {
-    return u.diff >= 3;
+    return u.role === "ranged";
 }
 
 function spawnArrow(from: UnitEnt, targetPos: { x: number; y: number }): ProjectileEnt {
@@ -185,6 +186,7 @@ export function stepGame(
     // 4) 충돌/AI/교전
     const dmgMap: Record<string, number> = {};
     const knockMap: Record<string, number> = {};
+    const healMap: Record<string, number> = {};
 
     for (let lane = 0; lane < L; lane++) {
         const arr = laneUnits[lane];
@@ -351,6 +353,54 @@ export function stepGame(
             u.targetId = targetId;
             u.scanCd = scanCd;
         }
+
+        // 4-3) 힐러 행동: 같은 레인 아군 중 체력 부족한 유닛 회복
+        for (const u of arr) {
+            if (u.role !== "healer") continue;
+
+            const healerTpl = getUnitTemplateForDiff(u.diff);
+            const healPerSec = healerTpl.healPerSec ?? 0;
+            if (healPerSec <= 0) continue;
+
+            const healRange = healerTpl.healRange ?? healerTpl.range;
+
+            let best: UnitEnt | null = null;
+            let bestMissingRatio = 0;
+
+            for (const v of arr) {
+                if (v.side !== u.side) continue;   // 아군만
+                if (v.id === u.id) continue;       // 자기 자신 제외
+
+                const vTpl = getUnitTemplateForDiff(v.diff);
+                const vMaxHp = vTpl.maxHp;
+
+                if (v.hp >= vMaxHp) continue;      // 풀피는 힐 대상 아님
+
+                const dx = v.x - u.x;
+                const dy = v.y - u.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist > healRange) continue;
+
+                const missingRatio = (vMaxHp - v.hp) / vMaxHp;
+
+                // 가장 많이 다친(비율 기준) 아군을 우선 힐
+                if (!best || missingRatio > bestMissingRatio) {
+                    best = v;
+                    bestMissingRatio = missingRatio;
+                }
+            }
+
+            if (best) {
+                // 힐하는 동안은 멈춰서 시전
+                u.moving = false;
+                u.speed = 0;
+
+                const amount = healPerSec * dtSec;
+                healMap[best.id] = (healMap[best.id] || 0) + amount;
+            }
+        }
+
+
     }
 
     // 5) Y 좌표를 레인 안으로 클램프
@@ -368,12 +418,20 @@ export function stepGame(
         }
     }
 
-    // 6) 데미지/넉백 적용 + 사망 유닛 제거 + 기지 데미지
+    // 6) 데미지/넉백/힐 적용 + 사망 유닛 제거 + 기지 데미지
     const finalUnits: UnitEnt[] = [];
     for (const u of moved) {
         const taken = dmgMap[u.id] ?? 0;
+        const healed = healMap[u.id] ?? 0;
         const knock = knockMap[u.id] ?? 0;
-        const hp = u.hp - taken;
+
+        const tpl = getUnitTemplateForDiff(u.diff);
+        const maxHp = tpl.maxHp;
+
+        // 데미지 - 힐 적용 후, 0 ~ maxHp 사이로 클램프
+        let hp = u.hp - taken + healed;
+        if (hp > maxHp) hp = maxHp;
+
         if (hp > 0) {
             const nu: UnitEnt = {
                 ...u,
@@ -393,6 +451,7 @@ export function stepGame(
             finalUnits.push(nu);
         }
     }
+
 
     // 7) 기지 파괴 체크
     const baseBroken = baseAlly <= 0 || baseEnemy <= 0;

@@ -21,6 +21,8 @@ type UnitVisualState = {
     lastAnim: AnimName;         // 현재 유지 중인 애니메이션
     lockUntil: number;          // 이 시각까지는 애니메이션 변경 금지 (잔상 방지)
     hitTimer: number;           //  피격 시 남은 점멸 시간(초)
+    // ★ 힐 감지용 플래그
+    justHealed: boolean;        // 이번 프레임에 힐을 받았는지 여부
 };
 
 /**
@@ -40,10 +42,72 @@ export function GameCanvas() {
     const projectileSpritesRef = useRef<Map<string, PIXI.Sprite>>(new Map());
     const arrowTexRef = useRef<PIXI.Texture | null>(null);
 
+    // ★ 힐 이펙트 레이어 & 프레임 텍스처
+    const healFramesRef = useRef<PIXI.Texture[] | null>(null);
+    const healLayerRef = useRef<PIXI.Container | null>(null);
+
+
     useEffect(() => {
-        // 경로는 실제 배치한 위치에 맞게 수정: 예) "/assets/Arrow.png"
-        arrowTexRef.current = PIXI.Texture.from("/assets/Arrow.png");
+        let cancelled = false;
+
+        (async () => {
+            try {
+                // 경로는 실제 위치에 맞게 수정
+                const tex = await PIXI.Assets.load("/assets/Arrow.png");
+                if (!cancelled) {
+                    arrowTexRef.current = tex;
+                }
+            } catch (err) {
+                console.error("[Arrow] texture load failed", err);
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function loadHealFrames() {
+            // /public/assets/Heal_Effect.png 기준
+            const tex = (await PIXI.Assets.load("/assets/Heal_Effect.png")) as PIXI.Texture;
+            if (cancelled) return;
+
+            const source = tex.source;           // v8 기준 baseTexture 대신 source 사용
+            const frameCount = 11;
+            const frameW = tex.width / frameCount;
+            const frameH = tex.height;
+
+            const frames: PIXI.Texture[] = [];
+            for (let i = 0; i < frameCount; i++) {
+                const rect = new PIXI.Rectangle(i * frameW, 0, frameW, frameH);
+                frames.push(
+                    new PIXI.Texture({
+                        source,
+                        frame: rect,
+                    })
+                );
+            }
+
+            healFramesRef.current = frames;
+        }
+
+        loadHealFrames();
+
+        return () => {
+            cancelled = true;
+            const frames = healFramesRef.current;
+            healFramesRef.current = null;
+            if (frames) {
+                frames.forEach((t) => t.destroy(true));
+            }
+        };
+    }, []);
+
+
+
 
     useEffect(() => {
         const wrap = wrapRef.current;
@@ -64,10 +128,38 @@ export function GameCanvas() {
         const spriteMap = new Map<string, PIXI.AnimatedSprite>();
         const visualState = new Map<string, UnitVisualState>();
 
+        // ★ 힐 이펙트 스프라이트 모음
+        const healSprites = new Set<PIXI.AnimatedSprite>();
+
         let lanesLayer: PIXI.Container | null = null;
         let unitsLayer: PIXI.Container | null = null;
         let resizeObserver: ResizeObserver | null = null;
 
+        // ★ 힐 이펙트 생성 함수
+        function spawnHealEffect(x: number, y: number) {
+            const layer = healLayerRef.current;
+            const frames = healFramesRef.current;
+            if (!layer || !frames || frames.length === 0) return;
+
+            const spr = new PIXI.AnimatedSprite(frames);
+            spr.anchor.set(0.5, 0.5);
+            spr.position.set(x, y - 24); // 유닛 머리 위 정도
+            spr.zIndex = y + 6000;
+            spr.scale.set(0.7);
+            spr.animationSpeed = 0.4;
+            spr.loop = false;
+
+            spr.onComplete = () => {
+                spr.parent?.removeChild(spr);
+                spr.destroy();
+                healSprites.delete(spr);
+            };
+
+            healSprites.add(spr);
+            layer.addChild(spr);
+            spr.play();
+        }
+        
         // 내부 시간(초) – 애니메이션 락/스폰 딜레이 계산용
         let timeSec = 0;
 
@@ -86,10 +178,17 @@ export function GameCanvas() {
         ): AnimName {
             // 0) 피격 감지 → focus를 unit으로 전환
             vs.hitTimer = Math.max(0, vs.hitTimer - dtSec);
+            vs.justHealed = false;
             
-            if (u.hp < vs.lastHp) {
+            const deltaHp = u.hp - vs.lastHp;
+            
+            if (deltaHp < -0.01) {
+                // 데미지
                 vs.focus = "unit";
                 vs.hitTimer = 0.12;  // 0.12초 동안 빨간 점멸
+            } else if (deltaHp > 0.01) {
+                // 힐
+                vs.justHealed = true;
             }
             vs.lastHp = u.hp;
 
@@ -220,7 +319,9 @@ export function GameCanvas() {
                         lastAnim: "idle",
                         lockUntil: timeSec,
                         hitTimer: 0,
+                        justHealed: false,
                     });
+
 
                     // 레인에 따라 약간 zIndex 변화 (위쪽 레인이 뒤에 보이도록)
                     sprite.zIndex = 10 + u.lane;
@@ -237,6 +338,7 @@ export function GameCanvas() {
                             lastAnim: "idle",
                             lockUntil: timeSec,
                             hitTimer: 0,
+                            justHealed: false,
                         };
                         visualState.set(u.id, v);
                         return v;
@@ -266,6 +368,10 @@ export function GameCanvas() {
                 );
                 setUnitAnimation(sprite, kind, desiredAnim);
 
+                if (vs.justHealed) {
+                    spawnHealEffect(u.x, u.y);
+                }
+                
             }
         };
 
@@ -294,14 +400,21 @@ export function GameCanvas() {
             unitsLayer = new PIXI.Container();
             unitsLayer.sortableChildren = true;
 
+            // ★ 힐 이펙트 레이어
+            const healLayer = new PIXI.Container();
+            healLayer.sortableChildren = true;
+            healLayerRef.current = healLayer;
+
             // ★ 투사체 레이어 생성
             const projectileLayer = new PIXI.Container();
             projectileLayerRef.current = projectileLayer;
 
-            // 레이어 추가 순서: 보드 → 유닛 → 투사체(제일 위)
+            // 레이어 추가 순서: 보드 → 유닛 → 힐 → 투사체(제일 위)
             root.addChild(lanesLayer);
             root.addChild(unitsLayer);
+            root.addChild(healLayer);
             root.addChild(projectileLayer);
+
 
             redrawLanes();
 
@@ -332,6 +445,14 @@ export function GameCanvas() {
             spriteMap.clear();
             visualState.clear();
 
+            // ★ 힐 이펙트 정리
+            for (const spr of healSprites) {
+                spr.parent?.removeChild(spr);
+                spr.destroy();
+            }
+            healSprites.clear();
+            healLayerRef.current = null;
+
             // ★ 투사체 스프라이트 정리
             for (const spr of projectileSpritesRef.current.values()) {
                 spr.parent?.removeChild(spr);
@@ -339,9 +460,6 @@ export function GameCanvas() {
             }
             projectileSpritesRef.current.clear();
             projectileLayerRef.current = null;
-
-            app.destroy(true);
-            appRef.current = null;
 
         };
     }, [laneCount]);
