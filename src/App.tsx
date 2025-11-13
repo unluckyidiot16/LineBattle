@@ -1,18 +1,31 @@
 // src/App.tsx
-import React, { useRef, useState } from "react";
-import { GameCanvas } from "./components/GameCanvas";
+import React, { useEffect, useRef, useState } from "react";
+
+import { useUiStore, StageId } from "./state/uiStore";
 import { useGameStore, GameMode } from "./state/gameStore";
-import { supa } from "./lib/supabaseClient";
+
+import { TitleScreen } from "./screens/TitleScreen";
+import { LobbyScreen } from "./screens/LobbyScreen";
+import { StageSelectScreen } from "./screens/StageSelectScreen";
+
+import { GameCanvas } from "./components/GameCanvas";
+import { HUD } from "./components/HUD";
 import { UnitBar } from "./components/UnitBar";
 import { QuizModal } from "./components/QuizModal";
-import { HUD } from "./components/HUD";
 import { AISpawner } from "./controllers/AISpawner";
 import { GameOverModal } from "./components/GameOverModal";
 
 export default function App() {
-    const { paused, setPaused, tick, gameMode, setGameMode, laneCount, lastResult } = useGameStore();
+    const scene = useUiStore((s) => s.scene);
+    const currentStageId = useUiStore((s) => s.currentStageId);
+    const completeStage = useUiStore((s) => s.completeStage);
 
-    const setMode = (m: GameMode) => () => setGameMode(m);
+    const {
+        ended,
+        winner,
+        resetMatch,
+        setGameMode,
+    } = useGameStore();
 
     // ===== 전장 드래그 스크롤 상태 =====
     const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -56,83 +69,100 @@ export default function App() {
         if (dragging) setDragging(false);
     };
 
+    // ============================
+    // 전투 진입 시: GameMode / match 초기화
+    // ============================
+    const lastStageRef = useRef<StageId | null>(null);
 
-    return (
-        <div className="app">
-            <header className="app__header">
-                <h1>Quiz Line Battle — MVP</h1>
+    useEffect(() => {
+        if (scene !== "battle") return;
+        if (!currentStageId) return;
+        if (lastStageRef.current === currentStageId) return;
 
-                <div className="app__controls" style={{ flexWrap: "wrap" }}>
-                    <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={setMode("tutorial1")} disabled={gameMode === "tutorial1"}>
-                            튜토리얼 (1레인)
-                        </button>
-                        <button onClick={setMode("ai1")} disabled={gameMode === "ai1"}>
-                            AI 대전 (1레인)
-                        </button>
-                        <button onClick={setMode("ai2")} disabled={gameMode === "ai2"}>
-                            AI 대전 (2레인)
-                        </button>
-                        <button onClick={setMode("pvp2")} disabled={gameMode === "pvp2"}>
-                            온라인 배틀 (2레인)
-                        </button>
+        const mapStageToMode = (id: StageId): GameMode => {
+            if (id === "tutorial") return "tutorial1";
+            // 지금은 전부 1레인 AI 스테이지로 통일
+            return "ai1";
+        };
+
+        const mode = mapStageToMode(currentStageId);
+        setGameMode(mode);
+        resetMatch();
+
+        lastStageRef.current = currentStageId;
+    }, [scene, currentStageId, resetMatch, setGameMode]);
+
+    // ============================
+    // 전투 종료 감지 → 스테이지 클리어 처리
+    // ============================
+    const handledResultRef = useRef(false);
+
+    useEffect(() => {
+        if (scene !== "battle") {
+            handledResultRef.current = false;
+            return;
+        }
+        if (!currentStageId) return;
+        if (!ended || !winner) return;
+        if (handledResultRef.current) return;
+
+        const win = winner === "ally";
+        completeStage(currentStageId, win);
+        handledResultRef.current = true;
+    }, [scene, currentStageId, ended, winner, completeStage]);
+
+    // ============================
+    // 씬 분기
+    // ============================
+
+    if (scene === "title") {
+        return <TitleScreen />;
+    }
+
+    if (scene === "lobby") {
+        return <LobbyScreen />;
+    }
+
+    if (scene === "stageSelect") {
+        return <StageSelectScreen />;
+    }
+
+    // battle
+    if (scene === "battle") {
+        return (
+            <div className="app app--battle">
+                <main className="app__main">
+                    {/* 전투 필드: 가로 스크롤 컨테이너 */}
+                    <div
+                        className="battle-scroll"
+                        ref={scrollRef}
+                        onMouseDown={handleMouseDownBattle}
+                        onMouseMove={handleMouseMoveBattle}
+                        onMouseUp={handleMouseUpOrLeaveBattle}
+                        onMouseLeave={handleMouseUpOrLeaveBattle}
+                        onTouchStart={handleTouchStartBattle}
+                        onTouchMove={handleTouchMoveBattle}
+                        onTouchEnd={handleTouchEndBattle}
+                        style={{ cursor: dragging ? "grabbing" : "grab" }}
+                    >
+                        <GameCanvas />
                     </div>
 
-                    <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => setPaused(!paused)}>{paused ? "▶ 재생" : "⏸ 일시정지"}</button>
-                        <button onClick={tick}>틱 +1 (디버그)</button>
-                        <button
-                            onClick={async () => {
-                                const { error } = await supa.from("_health").select("*").limit(1);
-                                alert(error ? `Supabase 연결 실패: ${error.message}` : "Supabase OK (테이블 없으면 무시)");
-                            }}
-                        >
-                            Supabase 체크
-                        </button>
-                    </div>
+                    {/* HUD / 유닛바: 화면 위에 오버레이 */}
+                    <HUD />
+                    <UnitBar />
 
-                    <div style={{ opacity: 0.85 }}>
-                        <small>
-                            mode: <b>{gameMode}</b> · lanes: <b>{laneCount}</b>
-                            {lastResult && (
-                                <>
-                                    {" "}| 최근 결과: <b>{lastResult.correct ? "정답" : "오답"}</b>
-                                    {" "}(Lv{lastResult.diff}, lane {lastResult.lane + 1})
-                                </>
-                            )}
-                        </small>
-                    </div>
-                </div>
-            </header>
+                    {/* 하단 퀴즈 영역 */}
+                    <QuizModal />
 
-            <main className="app__main">
-                {/* 전투 필드: 가로 스크롤 컨테이너 */}
-                <div
-                    className="battle-scroll"
-                    ref={scrollRef}
-                    onMouseDown={handleMouseDownBattle}
-                    onMouseMove={handleMouseMoveBattle}
-                    onMouseUp={handleMouseUpOrLeaveBattle}
-                    onMouseLeave={handleMouseUpOrLeaveBattle}
-                    onTouchStart={handleTouchStartBattle}
-                    onTouchMove={handleTouchMoveBattle}
-                    onTouchEnd={handleTouchEndBattle}
-                    style={{ cursor: dragging ? "grabbing" : "grab" }}
-                >
-                    <GameCanvas />
-                </div>
+                    {/* 나머지 컨트롤러 / 모달 */}
+                    <AISpawner />
+                    <GameOverModal />
+                </main>
+            </div>
+        );
+    }
 
-                {/* HUD / 유닛바: 화면 위에 오버레이 */}
-                <HUD />
-                <UnitBar />
-
-                {/* 하단 퀴즈 영역(퀴즈 없을 때는 '대기 중' 안내 표시) */}
-                <QuizModal />
-
-                {/* 나머지 컨트롤러 / 모달 */}
-                <AISpawner />
-                <GameOverModal />
-            </main>
-        </div>
-    );
+    // 혹시 모를 fallback
+    return null;
 }

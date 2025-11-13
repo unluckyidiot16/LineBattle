@@ -12,6 +12,10 @@ export type QuizResult = {
     questionId: string;
 };
 export type Side = "ally" | "enemy";
+
+// ★ 승자 타입 추가 (무승부까지 포함)
+export type Winner = Side | "draw" | null;
+
 export type ProjectileKind = "arrow";
 
 export type ProjectileEnt = {
@@ -57,7 +61,7 @@ export type UnitEnt = {
     projCd: number;
 
     role: UnitRole;
-    
+
     // ★ 기지를 공격 중인지 여부
     attackingBase: boolean;
 };
@@ -78,6 +82,9 @@ export type GameState = {
     maxSec: number;
     ended: boolean;
 
+    // ★ 이번 판 승자 (ally / enemy / draw / null)
+    winner: Winner;
+
     // quiz
     quizOpen: boolean;
     pending: QuizPending;
@@ -88,7 +95,7 @@ export type GameState = {
 
     // ★ 발사체
     projectiles: ProjectileEnt[];
-    
+
     // actions
     setPaused: (v: boolean) => void;
     tick: () => void;
@@ -122,7 +129,6 @@ function clampDiff(diff: number): number {
     return Math.max(1, Math.min(6, diff));
 }
 
-
 let gSpawnSeq = 0;
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -140,6 +146,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     timeSec: 0,
     maxSec: MATCH_SEC,
     ended: false,
+
+    // ★ 승자 초기값
+    winner: null,
 
     // quiz
     quizOpen: false,
@@ -182,6 +191,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         set({
             paused: false,
             ended: false,
+            winner: null, // ★ 새 판 시작 시 승자 초기화
             timeSec: 0,
             maxSec: typeof maxSec === "number" ? maxSec : MATCH_SEC,
         }),
@@ -190,6 +200,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         set({
             paused: false,
             ended: false,
+            winner: null, // ★ 리셋 시 승자 초기화
             timeSec: 0,
             maxSec: typeof maxSec === "number" ? maxSec : MATCH_SEC,
             baseAlly: BASE_HP,
@@ -200,7 +211,24 @@ export const useGameStore = create<GameState>((set, get) => ({
             projectiles: [],
         }),
 
-    endMatch: () => set({ paused: true, ended: true }),
+    // ★ 디버그/강제 종료용 endMatch (단독으로도 쓸 수 있게 승자 계산 포함)
+    endMatch: () =>
+        set((s) => {
+            let winner: Winner = s.winner;
+
+            if (!winner) {
+                if (s.baseAlly <= 0 && s.baseEnemy <= 0) winner = "draw";
+                else if (s.baseEnemy <= 0) winner = "ally";
+                else if (s.baseAlly <= 0) winner = "enemy";
+                // 둘 다 안 터졌으면 null 유지 (시간 제한 등 다른 룰로 처리 가능)
+            }
+
+            return {
+                paused: true,
+                ended: true,
+                winner,
+            };
+        }),
 
     // ===== unit spawn =====
     // 점수: 소환 시 확정, 위치: 레인 안에서 Y 랜덤
@@ -218,13 +246,14 @@ export const useGameStore = create<GameState>((set, get) => ({
                 radar,
                 moveSpeed,
                 role,
-                healPerSec,
-                healRange,
+                // 필요 시 힐러용 필드 사용 예정
+                // healPerSec,
+                // healRange,
             } = tpl;
 
             const speed = side === "ally" ? moveSpeed : -moveSpeed;
 
-            // ★ Pixi가 기록한 실제 전장 크기 사용
+            // ★ Pixi가 기록한 실제 전장 크기 사용 (fallback 포함)
             const stageWidth =
                 typeof (globalThis as any)._LB_STAGE_W === "number"
                     ? (globalThis as any)._LB_STAGE_W
@@ -292,7 +321,6 @@ export const useGameStore = create<GameState>((set, get) => ({
                 attackingBase: false,
             };
 
-
             return {
                 units: [...s.units, u],
                 scoreAlly,
@@ -300,7 +328,55 @@ export const useGameStore = create<GameState>((set, get) => ({
             };
         }),
 
-    // ===== advance: 순수 시뮬레이션 함수 호출 =====
+    // ===== advance: 순수 시뮬레이션 함수 호출 + 종료 조건 체크 =====
     advance: (dtSec, stageWidth, stageHeight) =>
-        set((s) => stepGame(s, dtSec, stageWidth, stageHeight)),
+        set((s) => {
+            // stepGame은 "순수 시뮬레이션"만 담당
+            const ns = stepGame(s, dtSec, stageWidth, stageHeight);
+
+            // 이미 끝난 판이면 그냥 유지
+            if (ns.ended) {
+                return ns;
+            }
+
+            let ended = false;
+            let winner: Winner = ns.winner;
+
+            // 1) 기지 동시 파괴 → 무승부
+            if (ns.baseAlly <= 0 && ns.baseEnemy <= 0) {
+                ended = true;
+                winner = "draw";
+            }
+            // 2) 적 기지 파괴 → 아군 승리
+            else if (ns.baseEnemy <= 0) {
+                ended = true;
+                winner = "ally";
+            }
+            // 3) 우리 기지 파괴 → 패배
+            else if (ns.baseAlly <= 0) {
+                ended = true;
+                winner = "enemy";
+            }
+            // 4) 시간 종료 룰이 필요하면 여기서 추가 (점수 비교 등)
+            else if (ns.timeSec >= ns.maxSec) {
+                ended = true;
+                if (ns.scoreAlly === ns.scoreEnemy) {
+                    winner = "draw";
+                } else {
+                    winner = ns.scoreAlly > ns.scoreEnemy ? "ally" : "enemy";
+                }
+            }
+
+            if (!ended) {
+                return ns;
+            }
+
+            // 종료 시에는 자동으로 일시정지
+            return {
+                ...ns,
+                ended: true,
+                paused: true,
+                winner,
+            };
+        }),
 }));

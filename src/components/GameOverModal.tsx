@@ -1,7 +1,8 @@
 // src/components/GameOverModal.tsx
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useGameStore } from "../state/gameStore";
 import { MATCH_SEC } from "../config/balance";
+import { useUiStore } from "../state/uiStore";
 
 export const GameOverModal: React.FC = () => {
     const {
@@ -24,6 +25,13 @@ export const GameOverModal: React.FC = () => {
         resetMatch: s.resetMatch,
     }));
 
+    const { scene, currentStageId, completeStage } = useUiStore((s) => ({
+        scene: s.scene,
+        currentStageId: s.currentStageId,
+        completeStage: s.completeStage,
+    }));
+
+    // 전투가 끝나지 않았으면 모달도 안 보임
     if (!ended) return null;
 
     // HP 기준 우선 판정
@@ -62,6 +70,28 @@ export const GameOverModal: React.FC = () => {
             reasonText = "시간 종료, 점수가 같습니다.";
         }
     }
+
+    // "우리 편 승리" 여부만 따로 계산 (HP/시간 모두 포함)
+    const isWin =
+        hpResult === "win" ||
+        (!hpResult && timeUp && scoreAlly > scoreEnemy);
+
+    // ✅ 승리 시: 한 번만 스테이지 클리어 처리 + StageSelect로 복귀
+    const handledRef = useRef(false);
+    useEffect(() => {
+        // 전투 씬이 아닐 땐 처리 초기화
+        if (scene !== "battle") {
+            handledRef.current = false;
+            return;
+        }
+        if (!ended) return;
+        if (!currentStageId) return;
+        if (!isWin) return;        // 패배/무승부는 여기서 막음
+        if (handledRef.current) return;
+
+        completeStage(currentStageId, true); // 스테이지 클리어 + 다음 스테이지 + 캐릭터 해금
+        handledRef.current = true;
+    }, [scene, ended, currentStageId, isWin, completeStage]);
 
     return (
         <div
@@ -124,6 +154,7 @@ export const GameOverModal: React.FC = () => {
                     </div>
                 </div>
 
+                {/* 패배/무승부일 때 다시 하기용 버튼 (승리 시엔 바로 StageSelect로 넘어가서 거의 안 보임) */}
                 <button
                     type="button"
                     onClick={() => resetMatch(MATCH_SEC)}
