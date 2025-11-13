@@ -72,7 +72,7 @@ export const UNIT_ANIMS: Record<
             frameHeight: 192,
             frames: 4,
             fps: 12,
-            loop: false,
+            loop: true,
         }),
     },
 
@@ -100,7 +100,7 @@ export const UNIT_ANIMS: Record<
             frameHeight: 320,
             frames: 3,
             fps: 12,
-            loop: false,
+            loop: true,
         }),
     },
 
@@ -128,7 +128,7 @@ export const UNIT_ANIMS: Record<
             frameHeight: 192,
             frames: 8,
             fps: 12,
-            loop: false,
+            loop: true,
         }),
     },
 
@@ -156,7 +156,7 @@ export const UNIT_ANIMS: Record<
             frameHeight: 192,
             frames: 11,
             fps: 12,
-            loop: false,
+            loop: true,
         }),
     },
 
@@ -184,7 +184,7 @@ export const UNIT_ANIMS: Record<
             frameHeight: 192,
             frames: 6,
             fps: 12,
-            loop: false,
+            loop: true,
         }),
     },
 
@@ -212,7 +212,7 @@ export const UNIT_ANIMS: Record<
             frameHeight: 192,
             frames: 8,
             fps: 12,
-            loop: false,
+            loop: true,
         }),
     },
 };

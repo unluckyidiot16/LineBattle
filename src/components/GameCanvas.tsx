@@ -13,10 +13,20 @@ import {
     preloadUnitAnims,
 } from "../gfx/unitAnims";
 
+/** 유닛별 시각 상태(애니메이션 안정화용) */
+type UnitVisualState = {
+    spawnTime: number;          // 스폰된 시각
+    focus: "base" | "unit";     // 기본 타겟 (기지 vs 유닛)
+    lastHp: number;             // 이전 프레임 HP (피격 감지)
+    lastAnim: AnimName;         // 현재 유지 중인 애니메이션
+    lockUntil: number;          // 이 시각까지는 애니메이션 변경 금지 (잔상 방지)
+    hitTimer: number;           //  피격 시 남은 점멸 시간(초)
+};
+
 /**
  * 메인 전투 캔버스
- * - 상단에 아군/적 기지 HP UI
- * - 중앙에는 PixiJS로 라인 / 유닛 렌더링
+ * - 양쪽 기지 HP UI
+ * - 중앙 PixiJS 라인 / 유닛 렌더링
  */
 export function GameCanvas() {
     const wrapRef = useRef<HTMLDivElement>(null);
@@ -39,30 +49,99 @@ export function GameCanvas() {
         const app = new PIXI.Application();
         appRef.current = app;
 
-        // 유닛 스프라이트 캐시
+        // 유닛 스프라이트 캐시 + 시각 상태
         const spriteMap = new Map<string, PIXI.AnimatedSprite>();
+        const visualState = new Map<string, UnitVisualState>();
+
         let lanesLayer: PIXI.Container | null = null;
         let unitsLayer: PIXI.Container | null = null;
         let resizeObserver: ResizeObserver | null = null;
 
-        // 유닛 애니메이션 선택
-        function pickAnimForUnit(u: UnitEnt, idToUnit: Map<string, UnitEnt>): AnimName {
-            if ((u as any).moving) {
-                return "run";
+        // 내부 시간(초) – 애니메이션 락/스폰 딜레이 계산용
+        let timeSec = 0;
+
+        /**
+         * 유닛 애니메이션 선택
+         * - 적이 없으면 적 기지를 향해 전진 (기지 타겟)
+         * - 공격 받으면 focus를 unit으로 전환 (유닛 타겟)
+         * - Run <-> Attack 전환에 락 타임을 둬서 잔상/지터링 완화
+         */
+        function pickAnimForUnit(
+            u: UnitEnt,
+            vs: UnitVisualState,
+            idToUnit: Map<string, UnitEnt>,
+            stageWidth: number,
+            dtSec: number
+        ): AnimName {
+            // 0) 피격 감지 → focus를 unit으로 전환
+            if (u.hp < vs.lastHp) {
+                vs.focus = "unit";
+                vs.hitTimer = 0.12;  // 0.12초 동안 빨간 점멸
+            }
+            vs.lastHp = u.hp;
+
+            // 1) 스폰 직후 딜레이: 일정 시간 동안은 idle 고정
+            const SPAWN_DELAY = 0.25; // 0.25초
+            if (timeSec - vs.spawnTime < SPAWN_DELAY) {
+                return "idle";
             }
 
-            if ((u as any).targetId) {
-                const t = idToUnit.get((u as any).targetId);
-                if (t) {
-                    const dx = t.x - u.x;
-                    const dy = t.y - u.y;
-                    const dist = Math.hypot(dx, dy);
-                    if (dist <= u.range + 4) {
-                        return "attack";
-                    }
+            const moving = (u as any).moving as boolean | undefined;
+            const targetId = (u as any).targetId as string | undefined;
+            const target = targetId ? idToUnit.get(targetId) : undefined;
+
+            let desired: AnimName = "idle";
+
+            // 2) 유닛 타겟이 있는 경우
+            if (target) {
+                vs.focus = "unit";
+
+                const dx = target.x - u.x;
+                const dy = target.y - u.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist <= u.range + 4) {
+                    // 사거리 안 → 공격
+                    desired = "attack";
+                } else if (moving) {
+                    // 아직 사거리 밖 → 이동
+                    desired = "run";
+                } else {
+                    desired = "idle";
+                }
+            } else {
+                // 3) 유닛 타겟이 없다면 → 기본은 적 기지 타겟
+                vs.focus = "base";
+
+                const BASE_MARGIN = 40; // 기지 앞 거리 여유
+                const enemyBaseX =
+                    u.side === "ally"
+                        ? stageWidth - BASE_MARGIN
+                        : BASE_MARGIN;
+                const distToBase = Math.abs(enemyBaseX - u.x);
+
+                if (distToBase <= u.range * 0.9) {
+                    // 기지 앞 → 공격 모션
+                    desired = "attack";
+                } else if (moving) {
+                    desired = "run";
+                } else {
+                    desired = "idle";
                 }
             }
-            return "idle";
+
+            // 4) 애니메이션 락: 너무 자주 바뀌면 잔상이 생기니 잠시 동안 유지
+            if (desired !== vs.lastAnim) {
+                // 아직 락 타임 안 끝났으면 이전 애니메이션 유지
+                if (timeSec < vs.lockUntil) {
+                    return vs.lastAnim;
+                }
+                // 락 타임 갱신
+                vs.lastAnim = desired;
+                vs.lockUntil = timeSec + 0.18; // 0.18초 동안 상태 유지
+            }
+
+            return vs.lastAnim;
         }
 
         // 보드 라인/배경 다시 그리기
@@ -87,6 +166,8 @@ export function GameCanvas() {
             if (destroyed || !app.renderer || !unitsLayer) return;
 
             const dtSec = ticker.deltaTime / 60;
+            timeSec += dtSec;
+
             const state = useGameStore.getState() as any;
 
             if (typeof state.advance === "function") {
@@ -97,12 +178,13 @@ export function GameCanvas() {
             const idToUnit = new Map<string, UnitEnt>();
             for (const u of units) idToUnit.set(u.id, u);
 
-            // 1) 없어질 유닛 제거
+            // 1) 없어질 유닛 제거 + 시각 상태 제거
             for (const [id, sprite] of spriteMap.entries()) {
                 if (!idToUnit.has(id)) {
                     sprite.parent?.removeChild(sprite);
                     sprite.destroy();
                     spriteMap.delete(id);
+                    visualState.delete(id);
                 }
             }
 
@@ -117,18 +199,60 @@ export function GameCanvas() {
                     sprite = created;
                     spriteMap.set(u.id, sprite);
 
+                    // 시각 상태 초기화
+                    visualState.set(u.id, {
+                        spawnTime: timeSec,
+                        focus: "base",
+                        lastHp: u.hp,
+                        lastAnim: "idle",
+                        lockUntil: timeSec,
+                        hitTimer: 0,
+                    });
+
                     // 레인에 따라 약간 zIndex 변화 (위쪽 레인이 뒤에 보이도록)
                     sprite.zIndex = 10 + u.lane;
                     unitsLayer.addChild(sprite);
                 }
 
-                // 위치 / zIndex 업데이트
+                const vs =
+                    visualState.get(u.id) ??
+                    (() => {
+                        const v: UnitVisualState = {
+                            spawnTime: timeSec,
+                            focus: "base",
+                            lastHp: u.hp,
+                            lastAnim: "idle",
+                            lockUntil: timeSec,
+                            hitTimer: 0,
+                        };
+                        visualState.set(u.id, v);
+                        return v;
+                    })();
+
+                // 위치/방향/정렬
                 sprite.position.set(u.x, u.y);
-                sprite.zIndex = 10 + u.lane;
+                const baseScale = 0.7;
+                const dir = u.side === "ally" ? 1 : -1;
+                sprite.scale.set(baseScale * dir, baseScale);
+                sprite.zIndex = u.y + u.lane * 1000;
+
+                // 피격 붉은 점멸
+                if (vs.hitTimer > 0) {
+                    sprite.tint = 0xff6666;    // 살짝 밝은 빨강
+                } else {
+                    sprite.tint = 0xffffff;    // 원래 색
+                }
 
                 // 애니메이션 상태 선택
-                const desiredAnim = pickAnimForUnit(u, idToUnit);
+                const desiredAnim = pickAnimForUnit(
+                    u,
+                    vs,
+                    idToUnit,
+                    app.renderer.width,
+                    dtSec
+                );
                 setUnitAnimation(sprite, kind, desiredAnim);
+
             }
         };
 
@@ -181,12 +305,13 @@ export function GameCanvas() {
 
             app.ticker.remove(tick);
 
-            // 스프라이트 정리
+            // 스프라이트/상태 정리
             for (const sprite of spriteMap.values()) {
                 sprite.parent?.removeChild(sprite);
                 sprite.destroy();
             }
             spriteMap.clear();
+            visualState.clear();
 
             app.destroy(true);
             appRef.current = null;
@@ -247,7 +372,12 @@ function drawBoardFrame(layer: PIXI.Container, w: number, h: number) {
 /**
  * 레인 구분선
  */
-function drawLanes(layer: PIXI.Container, w: number, h: number, laneCount: number) {
+function drawLanes(
+    layer: PIXI.Container,
+    w: number,
+    h: number,
+    laneCount: number
+) {
     const g = new PIXI.Graphics();
 
     const padding = 24;
