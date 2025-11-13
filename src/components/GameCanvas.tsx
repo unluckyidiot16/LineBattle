@@ -47,6 +47,38 @@ export function GameCanvas() {
     const healFramesRef = useRef<PIXI.Texture[] | null>(null);
     const healLayerRef = useRef<PIXI.Container | null>(null);
 
+    // ★ 성(본진) 스프라이트 & 텍스처
+    const castleAllyRef = useRef<PIXI.Sprite | null>(null);
+    const castleEnemyRef = useRef<PIXI.Sprite | null>(null);
+
+    // 성의 "기본 위치" (흔들기 전 기준점)
+    const castleBasePosRef = useRef({
+        allyX: 0,
+        allyY: 0,
+        enemyX: 0,
+        enemyY: 0,
+    });
+
+    const castleTexturesRef = useRef<{
+        ally?: PIXI.Texture;
+        enemy?: PIXI.Texture;
+        destroyed?: PIXI.Texture;
+    }>({});
+
+    // HP 비교 / 흔들기용 상태
+    const castleHitRef = useRef<{
+        inited: boolean;
+        prevAllyHp: number;
+        prevEnemyHp: number;
+        allyHitTimer: number;
+        enemyHitTimer: number;
+    }>({
+        inited: false,
+        prevAllyHp: 0,
+        prevEnemyHp: 0,
+        allyHitTimer: 0,
+        enemyHitTimer: 0,
+    });
 
     useEffect(() => {
         let cancelled = false;
@@ -290,10 +322,33 @@ export function GameCanvas() {
             drawBoardFrame(lanesLayer, w, h);
             drawLanes(lanesLayer, w, h, laneCount);
 
-            // Stage 사이즈를 전역으로도 저장 (물리 계산 등에서 사용할 때)
+            // ★ 게임 시뮬레이션 쪽에서 참조하는 전역 스테이지 크기
             (window as any)._LB_STAGE_W = w;
             (window as any)._LB_STAGE_H = h;
+
+            // ★ 성(본진) 기본 위치 업데이트
+            // gameSim.ts에서 margin = 24, baseAllyX = margin, baseEnemyX = stageWidth - margin 이라
+            // 여기서도 동일하게 맞춰줌
+            const margin = 24;
+            const centerY = h / 2;
+
+            const basePos = castleBasePosRef.current;
+            basePos.allyX = margin;
+            basePos.allyY = centerY;
+            basePos.enemyX = w - margin;
+            basePos.enemyY = centerY;
+
+            const sprAlly = castleAllyRef.current;
+            if (sprAlly) {
+                sprAlly.position.set(basePos.allyX, basePos.allyY);
+            }
+
+            const sprEnemy = castleEnemyRef.current;
+            if (sprEnemy) {
+                sprEnemy.position.set(basePos.enemyX, basePos.enemyY);
+            }
         }
+
 
         // 게임 루프 (Pixi ticker -> zustand advance + 스프라이트 동기화)
         const tick: PIXI.TickerCallback<PIXI.Ticker> = (ticker) => {
@@ -307,6 +362,33 @@ export function GameCanvas() {
             if (typeof state.advance === "function") {
                 state.advance(dtSec, app.renderer.width, app.renderer.height);
             }
+
+            // ★ 성 HP 변화 감지 → 흔들기 타이머 갱신
+            const baseAlly: number = state.baseAlly ?? 0;
+            const baseEnemy: number = state.baseEnemy ?? 0;
+
+            const hit = castleHitRef.current;
+            const HIT_SHAKE_TIME = 0.15; // 흔들리는 시간(초)
+
+            if (!hit.inited) {
+                hit.prevAllyHp = baseAlly;
+                hit.prevEnemyHp = baseEnemy;
+                hit.inited = true;
+            } else {
+                if (baseAlly < hit.prevAllyHp) {
+                    hit.allyHitTimer = HIT_SHAKE_TIME;
+                }
+                if (baseEnemy < hit.prevEnemyHp) {
+                    hit.enemyHitTimer = HIT_SHAKE_TIME;
+                }
+                hit.prevAllyHp = baseAlly;
+                hit.prevEnemyHp = baseEnemy;
+            }
+
+            // 타이머 감소
+            hit.allyHitTimer = Math.max(0, hit.allyHitTimer - dtSec);
+            hit.enemyHitTimer = Math.max(0, hit.enemyHitTimer - dtSec);
+
 
             const units: UnitEnt[] = (state.units ?? []) as UnitEnt[];
             const idToUnit = new Map<string, UnitEnt>();
@@ -441,6 +523,39 @@ export function GameCanvas() {
             root.addChild(healLayer);
             root.addChild(projectileLayer);
 
+            // ★ 성(본진) 텍스처 로드 + 스프라이트 생성
+            try {
+                const [texAlly, texEnemy, texDestroyed] = await Promise.all([
+                    PIXI.Assets.load("/assets/Castle_Blue.png") as Promise<PIXI.Texture>,
+                    PIXI.Assets.load("/assets/Castle_Red.png") as Promise<PIXI.Texture>,
+                    PIXI.Assets.load("/assets/Castle_Destroyed.png") as Promise<PIXI.Texture>,
+                ]);
+
+                castleTexturesRef.current = {
+                    ally: texAlly,
+                    enemy: texEnemy,
+                    destroyed: texDestroyed,
+                };
+
+                const sprAlly = new PIXI.Sprite(texAlly);
+                const sprEnemy = new PIXI.Sprite(texEnemy);
+
+                // 가운데 기준 (이미지 자체에서 위치 잡기)
+                sprAlly.anchor.set(0.5, 0.5);
+                sprEnemy.anchor.set(0.5, 0.5);
+
+                // 유닛보다 약간 뒤에 보이도록 (필요시 조절)
+                sprAlly.zIndex = -10;
+                sprEnemy.zIndex = -10;
+
+                castleAllyRef.current = sprAlly;
+                castleEnemyRef.current = sprEnemy;
+
+                unitsLayer.addChild(sprAlly);
+                unitsLayer.addChild(sprEnemy);
+            } catch (err) {
+                console.error("[Castle] failed to load castle textures", err);
+            }
 
             redrawLanes();
 
