@@ -1,4 +1,4 @@
-// src/App.tsx  ★ 전체 교체
+// src/App.tsx
 import React from "react";
 import { GameCanvas } from "./components/GameCanvas";
 import { useGameStore, GameMode } from "./state/gameStore";
@@ -9,9 +9,16 @@ import { HUD } from "./components/HUD";
 import { AISpawner } from "./controllers/AISpawner";
 import { GameOverModal } from "./components/GameOverModal";
 
-
 export default function App() {
-    const { paused, setPaused, tick, gameMode, setGameMode, laneCount, lastResult } = useGameStore();
+    const {
+        paused,
+        setPaused,
+        tick,
+        gameMode,
+        setGameMode,
+        laneCount,
+        lastResult,
+    } = useGameStore();
 
     const setMode = (m: GameMode) => () => setGameMode(m);
 
@@ -37,12 +44,21 @@ export default function App() {
                     </div>
 
                     <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => setPaused(!paused)}>{paused ? "▶ 재생" : "⏸ 일시정지"}</button>
+                        <button onClick={() => setPaused(!paused)}>
+                            {paused ? "▶ 재생" : "⏸ 일시정지"}
+                        </button>
                         <button onClick={tick}>틱 +1 (디버그)</button>
                         <button
                             onClick={async () => {
-                                const { error } = await supa.from("_health").select("*").limit(1);
-                                alert(error ? `Supabase 연결 실패: ${error.message}` : "Supabase OK (테이블 없으면 무시)");
+                                const { error } = await supa
+                                    .from("_health")
+                                    .select("*")
+                                    .limit(1);
+                                alert(
+                                    error
+                                        ? `Supabase 연결 실패: ${error.message}`
+                                        : "Supabase OK (테이블 없으면 무시)"
+                                );
                             }}
                         >
                             Supabase 체크
@@ -54,8 +70,10 @@ export default function App() {
                             mode: <b>{gameMode}</b> · lanes: <b>{laneCount}</b>
                             {lastResult && (
                                 <>
-                                    {" "}| 최근 결과: <b>{lastResult.correct ? "정답" : "오답"}</b>
-                                    {" "}(Lv{lastResult.diff}, lane {lastResult.lane + 1})
+                                    {" "}
+                                    | 최근 결과:{" "}
+                                    <b>{lastResult.correct ? "정답" : "오답"}</b>{" "}
+                                    (Lv{lastResult.diff}, lane {lastResult.lane + 1})
                                 </>
                             )}
                         </small>
@@ -64,10 +82,22 @@ export default function App() {
             </header>
 
             <main className="app__main">
-                <GameCanvas />
-                <HUD />
-                <UnitBar />
-                <QuizModal />
+                {/* 상단: 전투 필드 (스크롤 뷰 + 오버레이 HUD/UnitBar) */}
+                <div className="app__battle">
+                    <div className="battle-scroll">
+                        {/* 이 안이 가로로 길어지고, 좌우 스크롤/드래그 가능 */}
+                        <GameCanvas />
+                    </div>
+                    <HUD />
+                    <UnitBar />
+                </div>
+
+                {/* 하단: 퀴즈 도크 (모달 대신) */}
+                <div className="app__quiz">
+                    <QuizModal />
+                </div>
+
+                {/* 게임 로직 컨트롤러 */}
                 <AISpawner />
                 <GameOverModal />
             </main>

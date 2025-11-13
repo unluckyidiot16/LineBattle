@@ -13,11 +13,14 @@ const RARITIES = [
 
 export function UnitBar() {
     const [pick, setPick] = useState<{ diff: number } | null>(null);
-    const { laneCount, openQuiz,  quizOpen } = useGameStore();
+    const { laneCount, openQuiz, quizOpen } = useGameStore();
 
     const askLane = (diff: number) => {
-        if (laneCount === 1) openQuiz(diff, 0);
-        else setPick({ diff });
+        if (laneCount === 1) {
+            openQuiz(diff, 0);
+        } else {
+            setPick({ diff });
+        }
     };
 
     return (
@@ -25,12 +28,17 @@ export function UnitBar() {
             {RARITIES.map((r) => (
                 <button
                     key={r.diff}
-                    className="unitbar__btn"
+                    className={`unitbar__btn unitbar__btn--diff${r.diff}`}
                     onClick={() => askLane(r.diff)}
-                    disabled={quizOpen}   // ← 모달 열렸을 때 막기
+                    disabled={quizOpen}
                 >
-                    {r.label}
-                    <small className="unitbar__sub">Lv{r.diff}</small>
+                    {/* 얼굴 슬롯 */}
+                    <div className="unitbar__face" />
+
+                    <div className="unitbar__info">
+                        <div className="unitbar__label">{r.label}</div>
+                        <small className="unitbar__sub">Lv{r.diff}</small>
+                    </div>
                 </button>
             ))}
 
@@ -38,7 +46,11 @@ export function UnitBar() {
                 <div className="unitbar__lane">
                     <span>레인 선택:</span>
                     {Array.from({ length: laneCount }).map((_, i) => (
-                        <button key={i} onClick={() => openQuiz(pick.diff, i)} className="lane-btn">
+                        <button
+                            key={i}
+                            onClick={() => openQuiz(pick.diff, i)}
+                            className="lane-btn"
+                        >
                             {i === 0 ? "Left" : i === 1 ? "Right" : `Lane ${i + 1}`}
                         </button>
                     ))}

@@ -34,6 +34,9 @@ export type UnitEnt = {
     // AI용 필드
     targetId: string | null;
     scanCd: number; // 레이더 스캔까지 남은 시간(sec)
+
+    // ★ 기지를 공격 중인지 여부
+    attackingBase: boolean;
 };
 
 export type GameState = {
@@ -244,6 +247,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 atk,
                 targetId: null,
                 scanCd: 0,
+                attackingBase: false, 
             };
 
             return {

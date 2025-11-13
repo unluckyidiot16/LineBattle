@@ -1,6 +1,5 @@
 // gameSim.ts
 import type { GameState, UnitEnt } from "./gameStore";
-import { DMG_BY_DIFF } from "../config/balance";
 
 // AI 설정
 const AI_SCAN_INTERVAL = 0.25; // 타겟 없을 때 레이더 스캔 주기(초)
@@ -45,34 +44,63 @@ export function stepGame(
     }
 
     const margin = 24;
+    const baseAllyX = margin;
+    const baseEnemyX = stageWidth - margin;
+
+    const L = Math.max(1, prev.laneCount || 1);
+    const laneH = stageHeight > 0 ? stageHeight / L : 0;
+
     const moved: UnitEnt[] = [];
     let baseEnemy = prev.baseEnemy;
     let baseAlly = prev.baseAlly;
     let scoreAlly = prev.scoreAlly;
     let scoreEnemy = prev.scoreEnemy;
 
-    // 2) 이동 + 기지 도달 처리
+    // 2) 이동 + 기지(사거리) 도달 처리 (X, Y 모두 기지 방향으로 이동)
     for (const u of prev.units) {
-        // moving이 false면 제자리에서 싸우기만 함
-        const nx = u.x + (u.moving ? u.speed * dtSec : 0);
-        const ny = u.y;
+        let nx = u.x;
+        let ny = u.y;
 
-        const reachedEnemy = u.side === "ally" && nx >= stageWidth - margin;
-        const reachedAlly = u.side === "enemy" && nx <= margin;
+        if (u.moving && !u.attackingBase) {
+            // ★ 기지 좌표 계산
+            const isAlly = u.side === "ally";
+            const baseX = isAlly ? baseEnemyX : baseAllyX;
 
-        if (reachedEnemy || reachedAlly) {
-            const idx = clampDiff(u.diff) - 1;
-            const dmg = DMG_BY_DIFF[idx];
-
-            if (reachedEnemy) {
-                baseEnemy = Math.max(0, baseEnemy - dmg);
+            let baseY = ny;
+            if (laneH > 0) {
+                const laneIdx = Math.max(0, Math.min(L - 1, u.lane));
+                const y0 = laneH * laneIdx;
+                const y1 = laneH * (laneIdx + 1);
+                baseY = (y0 + y1) * 0.5; // 레인 중앙을 기지 Y로 사용
             }
-            if (reachedAlly) {
-                baseAlly = Math.max(0, baseAlly - dmg);
+
+            const dx = baseX - nx;
+            const dy = baseY - ny;
+            const dist = Math.hypot(dx, dy);
+            const range = u.range ?? 0;
+
+            if (dist > range) {
+                // ★ 사거리 밖 → 기지 쪽으로 대각선 이동
+                const baseSpeed = Math.max(40, Math.abs(u.speed));
+                if (dist > 1e-4) {
+                    const ux = dx / dist;
+                    const uy = dy / dist;
+
+                    nx += baseSpeed * dtSec * ux;
+                    ny += baseSpeed * dtSec * uy;
+
+                    // speed는 x축 속도로 유지(기존 로직 호환용)
+                    u.speed = baseSpeed * ux;
+                }
+            } else {
+                // ★ 기지 사거리 안 → 멈추고 기지 공격 모드
+                u.moving = false;
+                u.speed = 0;
+                u.attackingBase = true;
             }
-            continue; // 유닛 제거
         }
 
+        // 화면 밖으로 너무 멀리 나가면 제거
         if (nx > -margin && nx < stageWidth + margin) {
             moved.push({
                 ...u,
@@ -83,7 +111,6 @@ export function stepGame(
     }
 
     // 3) 레인별 그룹핑
-    const L = Math.max(1, prev.laneCount || 1);
     const laneUnits: UnitEnt[][] = Array.from({ length: L }, () => []);
     for (const u of moved) {
         const laneIdx = Math.max(0, Math.min(L - 1, u.lane));
@@ -125,7 +152,6 @@ export function stepGame(
                         // 적과 부딪히면 → 서로 멈추고 제자리에서 싸움
                         u.moving = false;
                         v.moving = false;
-                        // 위치는 크게 안 건드려서 "라인 스탑" 느낌 유지
                     } else {
                         // 같은 편끼리 겹칠 때만 살짝 떼어내기
                         const overlapX = halfW - absDx;
@@ -135,8 +161,6 @@ export function stepGame(
                             const moveU = u.moving;
                             const moveV = v.moving;
 
-                            // 둘 다 이미 멈춰 있는 상태라면 그냥 겹쳐 둔다
-                            // → 프론트라인이 덜 덜거리지 않게
                             if (!moveU && !moveV) {
                                 continue;
                             }
@@ -145,14 +169,11 @@ export function stepGame(
                                 const dir = dx >= 0 ? 1 : -1;
 
                                 if (moveU && moveV) {
-                                    // 둘 다 이동 중이면 반반 밀기
                                     u.x -= dir * overlapX * 0.5;
                                     v.x += dir * overlapX * 0.5;
                                 } else if (moveU && !moveV) {
-                                    // u만 이동 중 → u만 뒤로 밀기
                                     u.x -= dir * overlapX;
                                 } else if (!moveU && moveV) {
-                                    // v만 이동 중 → v만 뒤로 밀기
                                     v.x += dir * overlapX;
                                 }
                             } else {
@@ -220,30 +241,31 @@ export function stepGame(
                         targetId = null;
                     } else if (dist > u.range) {
                         // ★ 사거리 밖 → 타겟 방향으로 추격
-                        u.moving = true;
+                        if (!u.attackingBase) {
+                            // 기지 수비 중인 유닛은 멀리 추격하지 않는다
+                            u.moving = true;
 
-                        // 추격용 기본 속도 (기존 speed 크기 기반, 최소값 보정)
-                        const baseSpeed = Math.max(40, Math.abs(u.speed));
+                            const baseSpeed = Math.max(40, Math.abs(u.speed));
 
-                        const dirX = dx >= 0 ? 1 : -1;
-                        const dirY = dy >= 0 ? 1 : -1;
+                            const dirX = dx >= 0 ? 1 : -1;
+                            const dirY = dy >= 0 ? 1 : -1;
 
-                        // 가로 속도는 baseSpeed 유지, 세로는 약간만 (대각선이 반속처럼 느껴지지 않게)
-                        const vx = dirX * baseSpeed;
-                        const vy = dirY * baseSpeed * VERT_CHASE_RATIO;
+                            const vx = dirX * baseSpeed;
+                            const vy = dirY * baseSpeed * VERT_CHASE_RATIO;
 
-                        // x는 2단계 이동에서 speed를 사용하므로 여기서 세팅
-                        u.speed = vx;
+                            u.speed = vx;
 
-                        // y는 여기서 직접 보정
-                        if (Math.abs(dy) > 2) {
-                            // 너무 근접했을 땐 과도한 세로 떨림 방지
-                            u.y += vy * dtSec;
+                            if (Math.abs(dy) > 2) {
+                                u.y += vy * dtSec;
+                            }
+                        } else {
+                            // 기지에 붙어 있는 유닛은 멀리 있는 타겟은 무시
+                            targetId = null;
                         }
                     } else {
                         // ★ 사거리 안 → 이동 멈추고 제자리에서 공격
                         u.moving = false;
-                        u.speed = 0; // x 이동 속도도 0으로 고정
+                        u.speed = 0;
 
                         // 데미지 누적
                         dmgMap[t.id] = (dmgMap[t.id] || 0) + u.atk * dtSec;
@@ -262,8 +284,7 @@ export function stepGame(
     }
 
     // 5) Y 좌표를 레인 안으로 클램프
-    if (stageHeight > 0) {
-        const laneH = stageHeight / Math.max(1, L);
+    if (laneH > 0) {
         for (const u of moved) {
             const laneIdx = Math.max(0, Math.min(L - 1, u.lane));
             const y0 = laneH * laneIdx;
@@ -277,18 +298,29 @@ export function stepGame(
         }
     }
 
-    // 6) 데미지/넉백 적용 + 사망 유닛 제거
+    // 6) 데미지/넉백 적용 + 사망 유닛 제거 + 기지 데미지
     const finalUnits: UnitEnt[] = [];
     for (const u of moved) {
         const taken = dmgMap[u.id] ?? 0;
         const knock = knockMap[u.id] ?? 0;
         const hp = u.hp - taken;
         if (hp > 0) {
-            finalUnits.push({
+            const nu: UnitEnt = {
                 ...u,
                 hp,
                 x: u.x + knock,
-            });
+            };
+
+            // ★ 기지 사거리 안(attackingBase)이고 타겟이 없으면 기지를 공격
+            if (nu.attackingBase && !nu.targetId) {
+                if (nu.side === "ally") {
+                    baseEnemy = Math.max(0, baseEnemy - nu.atk * dtSec);
+                } else {
+                    baseAlly = Math.max(0, baseAlly - nu.atk * dtSec);
+                }
+            }
+
+            finalUnits.push(nu);
         }
     }
 

@@ -74,6 +74,8 @@ export function GameCanvas() {
             dtSec: number
         ): AnimName {
             // 0) 피격 감지 → focus를 unit으로 전환
+            vs.hitTimer = Math.max(0, vs.hitTimer - dtSec);
+            
             if (u.hp < vs.lastHp) {
                 vs.focus = "unit";
                 vs.hitTimer = 0.12;  // 0.12초 동안 빨간 점멸

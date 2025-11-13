@@ -13,13 +13,13 @@ export function QuizModal() {
     const [now, setNow] = useState(() => Date.now());
     const [loadErr, setLoadErr] = useState<string | null>(null);
 
-    // 1) 타이머 틱 훅 (항상 선언)
+    // 타이머 틱
     useEffect(() => {
         const id = setInterval(() => setNow(Date.now()), 200);
         return () => clearInterval(id);
     }, []);
 
-    // 2) 문제 로드 훅 (항상 선언)
+    // 문제 로드
     useEffect(() => {
         if (!quizOpen || !pending) {
             setAQ(null);
@@ -39,9 +39,8 @@ export function QuizModal() {
         }
     }, [quizOpen, pending]);
 
-    // 3) 파생값 훅(항상 선언)
     const canCancel = useMemo(() => {
-        if (!aq) return true; // 에러/미로딩 시 즉시 취소 허용
+        if (!aq) return true;
         return now - aq.assignedAt >= CANCEL_DELAY_MS;
     }, [aq, now]);
 
@@ -52,25 +51,24 @@ export function QuizModal() {
 
     const remainSec = Math.ceil(remainMs / 1000);
 
-    // 4) 타임아웃 자동 제출 훅(항상 선언)
+    // 타임아웃 자동 오답 처리
     useEffect(() => {
         if (!quizOpen) return;
         if (!aq) return;
+        if (!pending) return;
         if (remainMs <= 0) {
             onQuizResult({
                 correct: false,
-                diff: pending!.diff,
-                lane: pending!.lane,
+                diff: pending.diff,
+                lane: pending.lane,
                 questionId: aq.item.id,
             });
         }
     }, [quizOpen, aq, remainMs, onQuizResult, pending]);
 
-    // === 여기서부터는 렌더 분기 ===
-    if (!quizOpen || !pending) return null;
-
-    const submit = (from: "user" | "timeout") => {
-        const correct = aq && choice != null && choice === aq.item.answer && from !== "timeout";
+    const submit = () => {
+        if (!pending) return;
+        const correct = aq && choice != null && choice === aq.item.answer;
         onQuizResult({
             correct: !!correct,
             diff: pending.diff,
@@ -79,55 +77,109 @@ export function QuizModal() {
         });
     };
 
+    const hasActiveQuiz = quizOpen && !!pending;
+
     return (
-        <div className="modal__backdrop">
-            <div className="modal">
-                <header className="modal__header">
-                    <b>퀴즈 — 난이도 Lv{pending.diff}</b>
-                    {aq && <span className="modal__timer">{remainSec}s</span>}
-                </header>
+        <div className={`quizdock ${!hasActiveQuiz ? "quizdock--idle" : ""}`}>
+            {/* 헤더 */}
+            <div className="quizdock__header">
+                <span className="quizdock__title">
+                    {hasActiveQuiz && pending
+                        ? `퀴즈 — 난이도 Lv${pending.diff}`
+                        : "퀴즈 대기 중"}
+                </span>
+                {hasActiveQuiz && aq && (
+                    <span className="quizdock__timer">{remainSec}s</span>
+                )}
+            </div>
 
-                <div className="modal__body">
-                    {loadErr ? (
-                        <div style={{ padding: 12, background: "#111827", border: "1px solid #334155", borderRadius: 8 }}>
-                            <p style={{ margin: 0 }}>⚠️ {loadErr}</p>
-                            <p style={{ margin: "6px 0 0", opacity: 0.8, fontSize: 13 }}>
-                                <code>src/data/sampleQuiz.json</code>을 확인하거나, 서버 퀴즈 소스로 전환하세요.
-                            </p>
+            {/* 바디 */}
+            <div className="quizdock__body">
+                {!hasActiveQuiz || !pending ? (
+                    <div style={{ opacity: 0.7, fontSize: 13, marginTop: 4 }}>
+                        아래 소환 버튼을 눌러 유닛을 소환하면 퀴즈가 출제됩니다.
+                    </div>
+                ) : loadErr ? (
+                    <div
+                        style={{
+                            padding: 12,
+                            background: "#111827",
+                            border: "1px solid #334155",
+                            borderRadius: 8,
+                            fontSize: 13,
+                        }}
+                    >
+                        <p style={{ margin: 0 }}>⚠️ {loadErr}</p>
+                        <p
+                            style={{
+                                margin: "6px 0 0",
+                                opacity: 0.8,
+                                fontSize: 12,
+                            }}
+                        >
+                            <code>src/data/sampleQuiz.json</code>을 확인하거나,
+                            서버 퀴즈 소스로 전환하세요.
+                        </p>
+                    </div>
+                ) : !aq ? (
+                    <p style={{ opacity: 0.8, fontSize: 13 }}>문제를 불러오는 중…</p>
+                ) : (
+                    <>
+                        <p className="quizdock__qtext">{aq.item.text}</p>
+                        <div className="quizdock__choices">
+                            {aq.item.choices.map((c) => (
+                                <label
+                                    key={c.id}
+                                    className={`quizdock__choice ${
+                                        choice === c.id ? "on" : ""
+                                    }`}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="ans"
+                                        value={c.id}
+                                        checked={choice === c.id}
+                                        onChange={() => setChoice(c.id)}
+                                    />
+                                    <span className="quizdock__choice-id">
+                                        {c.id}.
+                                    </span>
+                                    {c.text}
+                                </label>
+                            ))}
                         </div>
-                    ) : aq ? (
-                        <>
-                            <p className="qtext">{aq.item.text}</p>
-                            <div className="choices">
-                                {aq.item.choices.map((c) => (
-                                    <label key={c.id} className={`choice ${choice === c.id ? "on" : ""}`}>
-                                        <input
-                                            type="radio"
-                                            name="ans"
-                                            value={c.id}
-                                            checked={choice === c.id}
-                                            onChange={() => setChoice(c.id)}
-                                        />
-                                        <span className="choice__id">{c.id}.</span> {c.text}
-                                    </label>
-                                ))}
-                            </div>
-                        </>
-                    ) : (
-                        <p style={{ opacity: 0.8 }}>문제를 불러오는 중…</p>
-                    )}
-                </div>
+                    </>
+                )}
+            </div>
 
-                <footer className="modal__footer">
-                    <button className="btn--cancel" disabled={!canCancel} onClick={closeQuiz}>
-                        취소{!canCancel && aq ? ` (${Math.ceil((CANCEL_DELAY_MS - (now - aq.assignedAt)) / 1000)}s)` : ""}
-                    </button>
-                    {!loadErr && aq && (
-                        <button className="btn--submit" disabled={!choice} onClick={() => submit("user")}>
-                            제출
+            {/* 푸터 */}
+            <div className="quizdock__footer">
+                {hasActiveQuiz && pending && (
+                    <>
+                        <button
+                            className="quizdock__btn"
+                            disabled={!canCancel}
+                            onClick={closeQuiz}
+                        >
+                            취소
+                            {!canCancel && aq
+                                ? ` (${Math.ceil(
+                                    (CANCEL_DELAY_MS - (now - aq.assignedAt)) /
+                                    1000
+                                )}s)`
+                                : ""}
                         </button>
-                    )}
-                </footer>
+                        {!loadErr && aq && (
+                            <button
+                                className="quizdock__btn"
+                                disabled={!choice}
+                                onClick={submit}
+                            >
+                                제출
+                            </button>
+                        )}
+                    </>
+                )}
             </div>
         </div>
     );
