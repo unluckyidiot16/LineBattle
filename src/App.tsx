@@ -1,5 +1,5 @@
 // src/App.tsx
-import React from "react";
+import React, { useRef, useState } from "react";
 import { GameCanvas } from "./components/GameCanvas";
 import { useGameStore, GameMode } from "./state/gameStore";
 import { supa } from "./lib/supabaseClient";
@@ -10,17 +10,52 @@ import { AISpawner } from "./controllers/AISpawner";
 import { GameOverModal } from "./components/GameOverModal";
 
 export default function App() {
-    const {
-        paused,
-        setPaused,
-        tick,
-        gameMode,
-        setGameMode,
-        laneCount,
-        lastResult,
-    } = useGameStore();
+    const { paused, setPaused, tick, gameMode, setGameMode, laneCount, lastResult } = useGameStore();
 
     const setMode = (m: GameMode) => () => setGameMode(m);
+
+    // ===== 전장 드래그 스크롤 상태 =====
+    const scrollRef = useRef<HTMLDivElement | null>(null);
+    const [dragging, setDragging] = useState(false);
+    const dragStartXRef = useRef(0);
+    const dragStartScrollLeftRef = useRef(0);
+
+    const handleMouseDownBattle = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!scrollRef.current) return;
+        setDragging(true);
+        dragStartXRef.current = e.clientX;
+        dragStartScrollLeftRef.current = scrollRef.current.scrollLeft;
+        e.preventDefault(); // 텍스트 선택 방지
+    };
+
+    const handleMouseMoveBattle = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!dragging || !scrollRef.current) return;
+        const dx = e.clientX - dragStartXRef.current;
+        scrollRef.current.scrollLeft = dragStartScrollLeftRef.current - dx;
+    };
+
+    const handleMouseUpOrLeaveBattle = () => {
+        if (dragging) setDragging(false);
+    };
+
+    const handleTouchStartBattle = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (!scrollRef.current) return;
+        setDragging(true);
+        dragStartXRef.current = e.touches[0]?.clientX ?? 0;
+        dragStartScrollLeftRef.current = scrollRef.current.scrollLeft;
+    };
+
+    const handleTouchMoveBattle = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (!dragging || !scrollRef.current) return;
+        const x = e.touches[0]?.clientX ?? dragStartXRef.current;
+        const dx = x - dragStartXRef.current;
+        scrollRef.current.scrollLeft = dragStartScrollLeftRef.current - dx;
+    };
+
+    const handleTouchEndBattle = () => {
+        if (dragging) setDragging(false);
+    };
+
 
     return (
         <div className="app">
@@ -44,21 +79,12 @@ export default function App() {
                     </div>
 
                     <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => setPaused(!paused)}>
-                            {paused ? "▶ 재생" : "⏸ 일시정지"}
-                        </button>
+                        <button onClick={() => setPaused(!paused)}>{paused ? "▶ 재생" : "⏸ 일시정지"}</button>
                         <button onClick={tick}>틱 +1 (디버그)</button>
                         <button
                             onClick={async () => {
-                                const { error } = await supa
-                                    .from("_health")
-                                    .select("*")
-                                    .limit(1);
-                                alert(
-                                    error
-                                        ? `Supabase 연결 실패: ${error.message}`
-                                        : "Supabase OK (테이블 없으면 무시)"
-                                );
+                                const { error } = await supa.from("_health").select("*").limit(1);
+                                alert(error ? `Supabase 연결 실패: ${error.message}` : "Supabase OK (테이블 없으면 무시)");
                             }}
                         >
                             Supabase 체크
@@ -70,10 +96,8 @@ export default function App() {
                             mode: <b>{gameMode}</b> · lanes: <b>{laneCount}</b>
                             {lastResult && (
                                 <>
-                                    {" "}
-                                    | 최근 결과:{" "}
-                                    <b>{lastResult.correct ? "정답" : "오답"}</b>{" "}
-                                    (Lv{lastResult.diff}, lane {lastResult.lane + 1})
+                                    {" "}| 최근 결과: <b>{lastResult.correct ? "정답" : "오답"}</b>
+                                    {" "}(Lv{lastResult.diff}, lane {lastResult.lane + 1})
                                 </>
                             )}
                         </small>
@@ -82,22 +106,30 @@ export default function App() {
             </header>
 
             <main className="app__main">
-                {/* 상단: 전투 필드 (스크롤 뷰 + 오버레이 HUD/UnitBar) */}
-                <div className="app__battle">
-                    <div className="battle-scroll">
-                        {/* 이 안이 가로로 길어지고, 좌우 스크롤/드래그 가능 */}
-                        <GameCanvas />
-                    </div>
-                    <HUD />
-                    <UnitBar />
+                {/* 전투 필드: 가로 스크롤 컨테이너 */}
+                <div
+                    className="battle-scroll"
+                    ref={scrollRef}
+                    onMouseDown={handleMouseDownBattle}
+                    onMouseMove={handleMouseMoveBattle}
+                    onMouseUp={handleMouseUpOrLeaveBattle}
+                    onMouseLeave={handleMouseUpOrLeaveBattle}
+                    onTouchStart={handleTouchStartBattle}
+                    onTouchMove={handleTouchMoveBattle}
+                    onTouchEnd={handleTouchEndBattle}
+                    style={{ cursor: dragging ? "grabbing" : "grab" }}
+                >
+                    <GameCanvas />
                 </div>
 
-                {/* 하단: 퀴즈 도크 (모달 대신) */}
-                <div className="app__quiz">
-                    <QuizModal />
-                </div>
+                {/* HUD / 유닛바: 화면 위에 오버레이 */}
+                <HUD />
+                <UnitBar />
 
-                {/* 게임 로직 컨트롤러 */}
+                {/* 하단 퀴즈 영역(퀴즈 없을 때는 '대기 중' 안내 표시) */}
+                <QuizModal />
+
+                {/* 나머지 컨트롤러 / 모달 */}
                 <AISpawner />
                 <GameOverModal />
             </main>

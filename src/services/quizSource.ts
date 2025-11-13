@@ -8,6 +8,19 @@ import rawData from "../data/sampleQuiz.json";
 const byLevel = new Map<number, QuizItem[]>();
 const ptr = new Map<number, number>();
 
+type RawJsonItem = {
+    id?: string;
+    question?: string;
+    text?: string;
+    options?: string[];
+    choices?: { id: string; text: string }[];
+    answer?: number | string;
+    difficulty?: string;
+    diff_lv?: number;
+    reward?: number;
+    time?: number;
+};
+
 function shuffle<T>(arr: T[]) {
     for (let i = arr.length - 1; i > 0; i--) {
         const j = (Math.random() * (i + 1)) | 0;
@@ -16,6 +29,71 @@ function shuffle<T>(arr: T[]) {
     return arr;
 }
 
+function clampLevel(lv: number | undefined | null): number {
+    const n = typeof lv === "number" && Number.isFinite(lv) ? Math.floor(lv) : 1;
+    return Math.max(1, Math.min(6, n));
+}
+
+// difficulty 태그 → 1~6 레벨 매핑
+function diffFromDifficultyTag(tag: string | undefined | null, index = 0): number {
+    const t = (tag ?? "").toLowerCase();
+    switch (t) {
+        case "easy":
+            // 1~2 번갈아 사용
+            return 1 + (index % 2);
+        case "medium":
+            // 3~4 번갈아 사용
+            return 3 + (index % 2);
+        case "hard":
+            // 5~6 번갈아 사용
+            return 5 + (index % 2);
+        default:
+            return 2;
+    }
+}
+
+// raw JSON(현재 sampleQuiz.json) → QuizItem으로 정규화
+function toQuizItem(raw: RawJsonItem, index: number): QuizItem {
+    // 이미 QuizItem 형태(text + choices)가 들어온 경우
+    if (raw && typeof raw.text === "string" && Array.isArray(raw.choices)) {
+        const lv = clampLevel(raw.diff_lv ?? diffFromDifficultyTag(raw.difficulty, index));
+        return {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore - QuizItem에 reward/time 등이 없어도 무시
+            ...raw,
+            id: raw.id ?? `q-${index}`,
+            diff_lv: lv,
+        } as QuizItem;
+    }
+
+    // sampleQuiz.json 형태(question/options/answer/difficulty)를 QuizItem으로 변환
+    const options = Array.isArray(raw.options) ? raw.options : [];
+    const choices = options.map((opt, i) => ({
+        id: String.fromCharCode("A".charCodeAt(0) + i), // "A", "B", "C", "D"...
+        text: String(opt),
+    }));
+
+    let answerId = "A";
+    if (typeof raw.answer === "number") {
+        const idx = Math.max(0, Math.min(options.length - 1, raw.answer));
+        answerId = String.fromCharCode("A".charCodeAt(0) + idx);
+    } else if (typeof raw.answer === "string") {
+        // "A"~"D" 같은 형태면 그대로 사용
+        answerId = raw.answer;
+    }
+
+    const lv = clampLevel(raw.diff_lv ?? diffFromDifficultyTag(raw.difficulty, index));
+
+    return {
+        id: raw.id ?? `q-${index}`,
+        diff_lv: lv,
+        text: raw.question ?? raw.text ?? "",
+        choices,
+        answer: answerId,
+    } as QuizItem;
+}
+
+// 레벨별 fallback(산수) 생성기
 function genFallbackForLevel(lv: number, n = 6): QuizItem[] {
     // 간단 산술문제 생성기(레벨에 따라 난이도 소폭 증가)
     const out: QuizItem[] = [];
@@ -35,22 +113,24 @@ function genFallbackForLevel(lv: number, n = 6): QuizItem[] {
                 { id: "C", text: String(wrong2) },
             ],
             answer: "B",
-        });
+        } as QuizItem);
     }
     return out;
 }
 
 export function initQuizSource() {
-    const list: QuizItem[] = Array.isArray(rawData) ? (rawData as QuizItem[]) : [];
+    const rawList: RawJsonItem[] = Array.isArray(rawData) ? (rawData as RawJsonItem[]) : [];
+    const list: QuizItem[] = rawList.map(toQuizItem);
+
     const levels = new Map<number, QuizItem[]>();
 
     // 1) JSON에서 채우기
-    for (const q of list) {
-        const lv = Math.max(1, Math.min(6, Math.floor((q as any).diff_lv)));
+    list.forEach((q) => {
+        const lv = clampLevel((q as any).diff_lv);
         const arr = levels.get(lv) ?? [];
         arr.push(q);
         levels.set(lv, arr);
-    }
+    });
 
     // 2) 비어있는 레벨은 자동 생성으로 채우기
     for (let lv = 1; lv <= 6; lv++) {
@@ -75,7 +155,7 @@ function ensureReady() {
 
 export function getNextQuestion(diff_lv: number, ttlMs = 25_000): AssignedQuestion {
     ensureReady();
-    const lv = Math.max(1, Math.min(6, Math.floor(diff_lv)));
+    const lv = clampLevel(diff_lv);
     let arr = byLevel.get(lv) ?? [];
     if (arr.length === 0) {
         // 레벨별로도 마지막 안전장치
@@ -88,5 +168,5 @@ export function getNextQuestion(diff_lv: number, ttlMs = 25_000): AssignedQuesti
     const item = arr[i];
     const assignedAt = Date.now();
     const token = `${item.id}:${assignedAt}:${Math.random().toString(36).slice(2, 8)}`;
-    return { item, token, assignedAt, ttlMs };
+    return { item, token, assignedAt, ttlMs } as AssignedQuestion;
 }

@@ -1,5 +1,6 @@
 // gameSim.ts
-import type { GameState, UnitEnt } from "./gameStore";
+import type { GameState, UnitEnt, ProjectileEnt } from "./gameStore";
+import { DMG_BY_DIFF } from "../config/balance";
 
 // AI 설정
 const AI_SCAN_INTERVAL = 0.25; // 타겟 없을 때 레이더 스캔 주기(초)
@@ -14,6 +15,64 @@ const VERT_CHASE_RATIO = 0.35; // 0.0~1.0 사이: 0.35면 가로는 그대로, �
 function clampDiff(diff: number): number {
     return Math.max(1, Math.min(6, diff));
 }
+// ─────────────────────────────
+// 투사체 설정
+// ─────────────────────────────
+const ARROW_SPEED = 520;          // 화살 속도(px/sec)
+const ARROW_FIRE_INTERVAL = 0.6;  // 한 유닛이 화살 쏘는 최소 간격(sec)
+
+// 원거리 유닛 판정(임시 룰): diff 3 이상이면 원거리로 취급
+function isRangedUnit(u: UnitEnt): boolean {
+    return u.diff >= 3;
+}
+
+function spawnArrow(from: UnitEnt, targetPos: { x: number; y: number }): ProjectileEnt {
+    const dx = targetPos.x - from.x;
+    const dy = targetPos.y - from.y;
+    const dist = Math.hypot(dx, dy) || 1;
+
+    const vx = (dx / dist) * ARROW_SPEED;
+    const vy = (dy / dist) * ARROW_SPEED;
+    const maxLife = dist / ARROW_SPEED;
+
+    return {
+        id: `arrow-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        side: from.side,
+        kind: "arrow",
+        x: from.x,
+        y: from.y,
+        vx,
+        vy,
+        life: 0,
+        maxLife,
+    };
+}
+
+function stepProjectiles(
+    projectiles: ProjectileEnt[],
+    dt: number,
+    stageWidth: number,
+    stageHeight: number
+): ProjectileEnt[] {
+    const out: ProjectileEnt[] = [];
+    for (const p of projectiles) {
+        const life = p.life + dt;
+        if (life > p.maxLife) continue;
+
+        const x = p.x + p.vx * dt;
+        const y = p.y + p.vy * dt;
+
+        // 화면 조금 벗어나면 제거
+        if (x < -128 || x > stageWidth + 128 || y < -128 || y > stageHeight + 128) {
+            continue;
+        }
+
+        out.push({ ...p, x, y, life });
+    }
+    return out;
+}
+
+
 
 /**
  * 순수 시뮬레이션 함수:
@@ -40,6 +99,7 @@ export function stepGame(
             paused: true,
             ended: true,
             units: [],
+            projectiles: [],
         };
     }
 
@@ -55,7 +115,8 @@ export function stepGame(
     let baseAlly = prev.baseAlly;
     let scoreAlly = prev.scoreAlly;
     let scoreEnemy = prev.scoreEnemy;
-
+    const newProjectiles: ProjectileEnt[] = [];
+    
     // 2) 이동 + 기지(사거리) 도달 처리 (X, Y 모두 기지 방향으로 이동)
     for (const u of prev.units) {
         let nx = u.x;
@@ -196,6 +257,7 @@ export function stepGame(
 
         // 4-2) 레이더 AI + 2D 추격/공격
         for (const u of arr) {
+            u.projCd = Math.max(0, (u.projCd ?? 0) - dtSec);
             let targetId = u.targetId;
             let scanCd = u.scanCd ?? 0;
 
@@ -274,6 +336,14 @@ export function stepGame(
                         const kb = KNOCKBACK_PER_SEC * dtSec;
                         const dir = t.side === "ally" ? -1 : 1;
                         knockMap[t.id] = (knockMap[t.id] || 0) + dir * kb;
+
+                        // ★ 원거리 유닛이면 일정 간격으로 화살 이펙트 발사
+                        if (isRangedUnit(u) && u.projCd <= 0) {
+                            newProjectiles.push(
+                                spawnArrow(u, { x: t.x, y: t.y })
+                            );
+                            u.projCd = ARROW_FIRE_INTERVAL;
+                        }
                     }
                 }
             }
@@ -328,6 +398,14 @@ export function stepGame(
     const baseBroken = baseAlly <= 0 || baseEnemy <= 0;
     const ended = baseBroken || prev.ended;
 
+    // 기존 + 새로 쏜 투사체들 업데이트
+    const updatedProjectiles = stepProjectiles(
+        [...prev.projectiles, ...newProjectiles],
+        dtSec,
+        stageWidth,
+        stageHeight
+    );
+
     return {
         ...prev,
         timeSec,
@@ -336,6 +414,7 @@ export function stepGame(
         scoreAlly,
         scoreEnemy,
         units: ended ? [] : finalUnits,
+        projectiles: ended ? [] : updatedProjectiles, // ★ 투사체도 함께 반환
         ended,
         paused: ended ? true : prev.paused,
     };

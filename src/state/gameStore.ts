@@ -11,6 +11,21 @@ export type QuizResult = {
     questionId: string;
 };
 export type Side = "ally" | "enemy";
+export type ProjectileKind = "arrow";
+
+export type ProjectileEnt = {
+    id: string;
+    side: Side;
+    kind: ProjectileKind;
+
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+
+    life: number;     // 살아온 시간(sec)
+    maxLife: number;  // 수명(sec)
+};
 
 export type UnitEnt = {
     id: string;
@@ -34,6 +49,10 @@ export type UnitEnt = {
     // AI용 필드
     targetId: string | null;
     scanCd: number; // 레이더 스캔까지 남은 시간(sec)
+
+    // ★ 원거리 투사체 쿨다운 (sec)
+    projCd: number;
+
 
     // ★ 기지를 공격 중인지 여부
     attackingBase: boolean;
@@ -63,6 +82,9 @@ export type GameState = {
     // units
     units: UnitEnt[];
 
+    // ★ 발사체
+    projectiles: ProjectileEnt[];
+    
     // actions
     setPaused: (v: boolean) => void;
     tick: () => void;
@@ -133,6 +155,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     // units
     units: [],
 
+    // projectiles
+    projectiles: [],
+
     // ===== core actions =====
     setPaused: (v) => set({ paused: v }),
     tick: () => set((s) => ({ tickCount: s.tickCount + 1 })),
@@ -178,6 +203,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             scoreAlly: 0,
             scoreEnemy: 0,
             units: [],
+            projectiles: [],
         }),
 
     endMatch: () => set({ paused: true, ended: true }),
@@ -194,14 +220,15 @@ export const useGameStore = create<GameState>((set, get) => ({
             const baseSpeed = 90 + d * 18;
             const speed = side === "ally" ? baseSpeed : -baseSpeed;
 
+            // ★ Pixi가 기록한 실제 전장 크기 사용
             const stageWidth =
-                typeof (globalThis as any)._stageWidth === "number"
-                    ? (globalThis as any)._stageWidth
+                typeof (globalThis as any)._LB_STAGE_W === "number"
+                    ? (globalThis as any)._LB_STAGE_W
                     : 800;
 
             const stageHeight =
-                typeof (globalThis as any)._stageHeight === "number"
-                    ? (globalThis as any)._stageHeight
+                typeof (globalThis as any)._LB_STAGE_H === "number"
+                    ? (globalThis as any)._LB_STAGE_H
                     : 400;
 
             const L = Math.max(1, s.laneCount || 1);
@@ -222,9 +249,14 @@ export const useGameStore = create<GameState>((set, get) => ({
                 y = Math.max(innerTop, Math.min(innerBottom, y));
             }
 
-            const startX = side === "ally" ? 16 : stageWidth - 16;
+            // ★ 스폰 위치: 기지에서 SPAWN_OFFSET 만큼 떨어진 곳
+            const SPAWN_OFFSET = 60;
+            const startX =
+                side === "ally"
+                    ? SPAWN_OFFSET
+                    : stageWidth - SPAWN_OFFSET;
 
-            // 소환 시점에 점수 확정
+            // 소환 시점 점수
             const idx = d - 1;
             const sc = SCORE_BY_DIFF[idx];
             const scoreAlly = side === "ally" ? s.scoreAlly + sc : s.scoreAlly;
@@ -247,7 +279,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                 atk,
                 targetId: null,
                 scanCd: 0,
-                attackingBase: false, 
+                projCd: 0,
+                attackingBase: false,
             };
 
             return {

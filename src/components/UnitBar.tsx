@@ -11,6 +11,34 @@ const RARITIES = [
     { diff: 6, label: "UR" },
 ];
 
+// 각 유닛의 Idle 스프라이트 정보
+type FaceSprite = {
+    src: string;
+    frameWidth: number;
+    frameHeight: number;
+    frames: number;
+};
+
+// 예시: archer Idle 스프라이트
+// public/assets/units/archer/Archer_Idle.png 기준
+const archerIdle: FaceSprite = {
+    src: "/assets/units/archer/Archer_Idle.png",
+    frameWidth: 192,
+    frameHeight: 192,
+    frames: 6,
+};
+
+// diff별로 어떤 얼굴을 쓸지 매핑
+// 지금은 전부 archer로 통일해두고, 나중에 diff별로 바꾸면 됨
+const UNIT_FACES: Record<number, FaceSprite> = {
+    1: archerIdle,
+    2: archerIdle,
+    3: archerIdle,
+    4: archerIdle,
+    5: archerIdle,
+    6: archerIdle,
+};
+
 export function UnitBar() {
     const [pick, setPick] = useState<{ diff: number } | null>(null);
     const { laneCount, openQuiz, quizOpen } = useGameStore();
@@ -25,22 +53,31 @@ export function UnitBar() {
 
     return (
         <div className="unitbar">
-            {RARITIES.map((r) => (
-                <button
-                    key={r.diff}
-                    className={`unitbar__btn unitbar__btn--diff${r.diff}`}
-                    onClick={() => askLane(r.diff)}
-                    disabled={quizOpen}
-                >
-                    {/* 얼굴 슬롯 */}
-                    <div className="unitbar__face" />
+            {RARITIES.map((r) => {
+                const sprite = UNIT_FACES[r.diff];
+                const faceStyle = sprite
+                    ? {
+                        backgroundImage: `url(${sprite.src})`,
+                        // 실제 자르는 건 CSS(.unitbar__face)의
+                        // background-size: cover + background-position: 0 0 에 맡김
+                    }
+                    : undefined;
 
-                    <div className="unitbar__info">
-                        <div className="unitbar__label">{r.label}</div>
-                        <small className="unitbar__sub">Lv{r.diff}</small>
-                    </div>
-                </button>
-            ))}
+                return (
+                    <button
+                        key={r.diff}
+                        className={`unitbar__btn unitbar__btn--diff${r.diff}`}
+                        onClick={() => askLane(r.diff)}
+                        disabled={quizOpen}
+                    >
+                        <div className="unitbar__face" style={faceStyle} />
+                        <div className="unitbar__info">
+                            <div className="unitbar__label">{r.label}</div>
+                            <small className="unitbar__sub">Lv{r.diff}</small>
+                        </div>
+                    </button>
+                );
+            })}
 
             {pick && laneCount > 1 && (
                 <div className="unitbar__lane">

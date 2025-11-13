@@ -1,32 +1,20 @@
 /* src/styles.css */
-:root {
-    color-scheme: dark;
-}
-* {
-    box-sizing: border-box;
-}
-html,
-body,
-#root {
-    height: 100%;
-    margin: 0;
-}
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
 body {
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
-    sans-serif;
-    background: #0b1220;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: #020617;
     color: #e5e7eb;
 }
 
-/* =====================
-   레이아웃
-   ===================== */
 .app {
     display: flex;
     flex-direction: column;
     height: 100%;
 }
 
+/* 헤더 */
 .app__header {
     display: flex;
     align-items: center;
@@ -35,13 +23,7 @@ body {
     padding: 12px 16px;
     border-bottom: 1px solid #1f2a44;
 }
-
-.app__controls {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
+.app__controls { display: flex; gap: 8px; }
 .app__controls button {
     background: #1e293b;
     color: #e2e8f0;
@@ -49,12 +31,10 @@ body {
     padding: 8px 12px;
     border-radius: 8px;
     cursor: pointer;
-    font-size: 13px;
 }
-.app__controls button:hover {
-    background: #243244;
-}
+.app__controls button:hover { background: #243244; }
 
+/* 메인 레이아웃: 위에 전투, 아래 퀴즈 */
 .app__main {
     flex: 1;
     min-height: 0;
@@ -64,78 +44,63 @@ body {
     gap: 8px;
 }
 
-/* =====================
-   전투 필드 + 스크롤 뷰
-   ===================== */
-.app__battle {
+/* 전투 필드 뷰포트: 스크롤바는 숨기고, 내부는 스크롤 가능 */
+.battle-scroll {
     position: relative;
-    flex: 0 0 auto;
-    height: min(50vh, 60vw); /* 가로 폭에 비례 + 최대 50vh */
-    min-height: 220px;
+    width: 100%;
+    overflow-x: auto;           /* 실제 스크롤은 유지 */
+    overflow-y: hidden;
+    -ms-overflow-style: none;   /* IE, Edge */
+    scrollbar-width: none;      /* Firefox */
+    user-select: none;          /* 드래그 중 텍스트 선택 방지 */
+}
+.battle-scroll::-webkit-scrollbar {
+    display: none;              /* Chrome, Safari */
+}
+
+/* GameCanvas 루트 : 논리 전장 폭을 절대값으로 고정 */
+.canvas-wrap {
+    position: relative;
+    width: 1600px;                      /* ★ 전장의 가로 길이 고정 */
+    height: clamp(260px, 40vh, 420px);  /* 세로만 반응형 */
+    margin: 0 auto;                     /* 넓은 화면에서는 가운데 정렬 */
     border: 1px solid #1f2a44;
     border-radius: 12px;
     overflow: hidden;
-    background: radial-gradient(circle at top, #020617, #020617);
+    background: #020617;
 }
 
-/* 캔버스를 감싸는 스크롤 컨테이너 */
-.battle-scroll {
-    width: 100%;
-    height: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-}
-
-/* 가로 스크롤바(모바일은 자연스럽게 손가락 드래그로 스크롤) */
-.battle-scroll::-webkit-scrollbar {
-    height: 6px;
-}
-.battle-scroll::-webkit-scrollbar-thumb {
-    background: #1f2937;
-    border-radius: 3px;
-}
-
-/* 실제 필드는 뷰보다 더 길게 (2배) */
-.battle-scroll .canvas-wrap {
-    position: relative;
-    width: 200%;
-    height: 100%;
-    border: none;
-    border-radius: 0;
-}
-
-/* GameCanvas 기본 */
-.canvas-wrap {
-    position: relative;
-}
 canvas {
     display: block;
     width: 100%;
     height: 100%;
 }
 
-/* =====================
-   하단 퀴즈 도크
-   ===================== */
-.app__quiz {
-    flex: 1 1 0;
-    min-height: 180px;
+
+/* GameCanvas 루트(이미 존재하는 .canvas-wrap)를 넓게 만들어서 스크롤 발생 */
+.canvas-wrap {
+    height: clamp(260px, 40vh, 420px);      /* 너무 작아지지 않게 고정 */
     border: 1px solid #1f2a44;
     border-radius: 12px;
-    padding: 10px 12px;
+    overflow: hidden;
     background: #020617;
 }
 
-/* =====================
-   UnitBar (소환 + 얼굴)
-   ===================== */
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* ===== UnitBar ===== */
 .unitbar {
     position: absolute;
     left: 12px;
     bottom: 12px;
     display: flex;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;      /* ✅ 항상 한 줄 */
+    overflow-x: auto;       /* 좁은 화면에서는 가로 스크롤 */
     background: #0b1220cc;
     padding: 10px;
     border: 1px solid #1f2a44;
@@ -143,69 +108,51 @@ canvas {
     backdrop-filter: blur(4px);
 }
 
+
 .unitbar__btn {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     background: #1e293b;
     color: #e2e8f0;
     border: 1px solid #334155;
     padding: 6px 10px;
     border-radius: 10px;
     cursor: pointer;
-    min-width: 80px;
-    font-size: 13px;
+    min-width: 88px;
+    font-size: 14px;
 }
-.unitbar__btn:disabled {
-    opacity: 0.4;
-    cursor: default;
+.unitbar__btn[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
-/* 캐릭터 얼굴 자리 */
 .unitbar__face {
     width: 32px;
     height: 32px;
-    border-radius: 999px;
+    border-radius: 8px;
     background: #020617;
     background-size: cover;
-    background-position: center;
+    background-position: 0 0;   /* 스프라이트 첫 프레임 */
     flex-shrink: 0;
-}
-
-/* ★ diff별 얼굴 이미지 경로는 프로젝트에 맞게 교체해서 사용 */
-.unitbar__btn--diff1 .unitbar__face {
-    background-image: url("/assets/units/diff1.png");
-}
-.unitbar__btn--diff2 .unitbar__face {
-    background-image: url("/assets/units/diff2.png");
-}
-.unitbar__btn--diff3 .unitbar__face {
-    background-image: url("/assets/units/diff3.png");
-}
-.unitbar__btn--diff4 .unitbar__face {
-    background-image: url("/assets/units/diff4.png");
-}
-.unitbar__btn--diff5 .unitbar__face {
-    background-image: url("/assets/units/diff5.png");
-}
-.unitbar__btn--diff6 .unitbar__face {
-    background-image: url("/assets/units/diff6.png");
+    overflow: hidden;
 }
 
 .unitbar__info {
     display: flex;
     flex-direction: column;
+    gap: 2px;
     align-items: flex-start;
 }
+
 .unitbar__label {
-    font-size: 13px;
     font-weight: 600;
-    line-height: 1.1;
+    font-size: 14px;
 }
 .unitbar__sub {
     display: block;
-    opacity: 0.7;
+    opacity: .7;
     font-size: 11px;
 }
 
@@ -213,7 +160,7 @@ canvas {
     display: flex;
     gap: 6px;
     align-items: center;
-    margin-left: 4px;
+    margin-left: 8px;
 }
 .lane-btn,
 .lane-cancel {
@@ -222,109 +169,106 @@ canvas {
     border: 1px solid #334155;
     padding: 6px 10px;
     border-radius: 8px;
-    cursor: pointer;
 }
 
-/* =====================
-   퀴즈 도크 UI
-   ===================== */
+/* ===== 퀴즈 도크(하단) ===== */
 .quizdock {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    gap: 8px;
+    flex: 0 0 auto;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #1f2a44;
+    background: #020617;
+    min-height: 140px;
 }
 
 .quizdock__header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    font-size: 13px;
+    justify-content: space-between;
+    margin-bottom: 8px;
 }
-.quizdock__title {
-    font-weight: 600;
+
+.quizdock__header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
+
 .quizdock__timer {
     background: #1e293b;
     border: 1px solid #334155;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 8px;
 }
 
-.quizdock__body {
-    flex: 1 1 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    overflow: hidden;
+.quizdock__body .qtext {
+    font-size: 16px;
+    margin: 4px 0 10px;
 }
-
-.quizdock__qtext {
-    font-size: 15px;
-    line-height: 1.4;
-    max-height: 4.2em;
-    overflow: auto;
-}
-
-.quizdock__choices {
+.quizdock__body .choices {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 6px;
+    gap: 8px;
 }
-
-.quizdock__choice {
+.quizdock__body .choice {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 8px;
+    padding: 8px;
     border: 1px solid #334155;
     border-radius: 8px;
-    background: #0b1220;
+    background: #111827;
     cursor: pointer;
-    font-size: 13px;
 }
-.quizdock__choice.on {
+.quizdock__body .choice.on {
     outline: 2px solid #60a5fa;
 }
-.quizdock__choice input {
+
+.quizdock__body .choice--correct {
+    border-color: #22c55e;
+    box-shadow: 0 0 0 2px #22c55e60;
+}
+
+.quizdock__body .choice--wrong {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 2px #ef444460;
+}
+
+.quizdock__body .choice input {
     accent-color: #60a5fa;
 }
-.quizdock__choice-id {
+.quizdock__body .choice__id {
     width: 20px;
     display: inline-block;
+    opacity: .8;
+}
+
+.quizdock__placeholder {
     opacity: 0.8;
+    font-size: 14px;
 }
 
 .quizdock__footer {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
+    margin-top: 12px;
 }
 
-.quizdock__btn {
+.btn--cancel,
+.btn--submit {
     background: #1e293b;
     color: #e2e8f0;
     border: 1px solid #334155;
-    padding: 6px 10px;
+    padding: 8px 12px;
     border-radius: 8px;
     cursor: pointer;
-    font-size: 13px;
 }
-.quizdock__btn[disabled] {
-    opacity: 0.5;
-    cursor: default;
-}
-
-/* 퀴즈 없을 때 */
-.quizdock--idle {
-    opacity: 0.8;
-    font-size: 13px;
+.btn--cancel[disabled] {
+    opacity: .5;
+    cursor: not-allowed;
 }
 
-/* =====================
-   모달 (GameOver 등)
-   ===================== */
+/* ===== 기존 HUD / GameOverModal 용 ===== */
 .modal__backdrop {
     position: fixed;
     inset: 0;
@@ -342,26 +286,15 @@ canvas {
     padding: 12px;
     box-shadow: 0 10px 40px #0008;
 }
-.modal__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
+.modal__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .modal__timer {
     background: #1e293b;
     border: 1px solid #334155;
     padding: 4px 8px;
     border-radius: 8px;
 }
-.modal__body .qtext {
-    font-size: 18px;
-    margin: 8px 0 12px;
-}
-.choices {
-    display: grid;
-    gap: 8px;
-}
+.modal__body .qtext { font-size: 18px; margin: 8px 0 12px; }
+.choices { display: grid; gap: 8px; }
 .choice {
     display: flex;
     align-items: center;
@@ -372,25 +305,17 @@ canvas {
     background: #111827;
     cursor: pointer;
 }
-.choice.on {
-    outline: 2px solid #60a5fa;
-}
-.choice input {
-    accent-color: #60a5fa;
-}
-.choice__id {
-    width: 20px;
-    display: inline-block;
-    opacity: 0.8;
-}
+.choice.on { outline: 2px solid #60a5fa; }
+.choice input { accent-color: #60a5fa; }
+.choice__id { width: 20px; display: inline-block; opacity: .8; }
+
 .modal__footer {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
     margin-top: 12px;
 }
-.btn--cancel,
-.btn--submit {
+.btn--cancel, .btn--submit {
     background: #1e293b;
     color: #e2e8f0;
     border: 1px solid #334155;
@@ -398,14 +323,8 @@ canvas {
     border-radius: 8px;
     cursor: pointer;
 }
-.btn--cancel[disabled] {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
 
-/* =====================
-   HUD (전투 상단 중앙)
-   ===================== */
+/* HUD */
 .hud {
     position: absolute;
     top: 10px;
@@ -417,38 +336,12 @@ canvas {
     padding: 8px 12px;
     backdrop-filter: blur(4px);
 }
-.hud__row {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-.hud__block {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.hud__label {
-    font-size: 12px;
-    opacity: 0.75;
-}
-.hud__value {
-    font-weight: 700;
-    min-width: 40px;
-    text-align: right;
-}
-.hud__hp {
-    width: 100px;
-    height: 8px;
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 6px;
-    overflow: hidden;
-}
-.hud__hp > span {
-    display: block;
-    height: 100%;
-    background: #60a5fa;
-}
+.hud__row { display: flex; gap: 12px; align-items: center; }
+.hud__block { display: flex; align-items: center; gap: 6px; }
+.hud__label { font-size: 12px; opacity: .75; }
+.hud__value { font-weight: 700; min-width: 40px; text-align: right; }
+.hud__hp { width: 100px; height: 8px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; overflow: hidden; }
+.hud__hp > span { display: block; height: 100%; background: #60a5fa; }
 .hud__banner {
     position: absolute;
     top: 52px;
@@ -460,12 +353,12 @@ canvas {
     border-radius: 8px;
 }
 
-/* 반응형(모바일) 약간 보정 */
-@media (max-width: 768px) {
-    .app__battle {
-        height: min(45vh, 70vw);
+/* 모바일에서 약간 더 높이 확보 */
+@media (max-width: 640px) {
+    .canvas-wrap {
+        height: 40vh;
     }
-    .app__quiz {
-        min-height: 200px;
+    .quizdock {
+        min-height: 160px;
     }
 }

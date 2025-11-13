@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import * as PIXI from "pixi.js";
 import { useGameStore } from "../state/gameStore";
-import type { UnitEnt } from "../state/gameStore";
+import type { UnitEnt, ProjectileEnt } from "../state/gameStore";
 import { GameBase } from "./GameBase";
 import {
     createUnitSprite,
@@ -33,6 +33,17 @@ export function GameCanvas() {
     const appRef = useRef<PIXI.Application | null>(null);
 
     const laneCount = useGameStore((s) => s.laneCount ?? 3);
+    const projectiles = useGameStore((s) => s.projectiles as ProjectileEnt[]);
+
+    // ★ 투사체 레이어 & 스프라이트/텍스처 참조
+    const projectileLayerRef = useRef<PIXI.Container | null>(null);
+    const projectileSpritesRef = useRef<Map<string, PIXI.Sprite>>(new Map());
+    const arrowTexRef = useRef<PIXI.Texture | null>(null);
+
+    useEffect(() => {
+        // 경로는 실제 배치한 위치에 맞게 수정: 예) "/assets/Arrow.png"
+        arrowTexRef.current = PIXI.Texture.from("/assets/Arrow.png");
+    }, []);
 
     useEffect(() => {
         const wrap = wrapRef.current;
@@ -283,8 +294,14 @@ export function GameCanvas() {
             unitsLayer = new PIXI.Container();
             unitsLayer.sortableChildren = true;
 
+            // ★ 투사체 레이어 생성
+            const projectileLayer = new PIXI.Container();
+            projectileLayerRef.current = projectileLayer;
+
+            // 레이어 추가 순서: 보드 → 유닛 → 투사체(제일 위)
             root.addChild(lanesLayer);
             root.addChild(unitsLayer);
+            root.addChild(projectileLayer);
 
             redrawLanes();
 
@@ -315,24 +332,66 @@ export function GameCanvas() {
             spriteMap.clear();
             visualState.clear();
 
+            // ★ 투사체 스프라이트 정리
+            for (const spr of projectileSpritesRef.current.values()) {
+                spr.parent?.removeChild(spr);
+                spr.destroy();
+            }
+            projectileSpritesRef.current.clear();
+            projectileLayerRef.current = null;
+
             app.destroy(true);
             appRef.current = null;
+
         };
     }, [laneCount]);
 
+    // ★ 투사체 렌더링: projectiles → Arrow 스프라이트
+    useEffect(() => {
+        const layer = projectileLayerRef.current;
+        const tex = arrowTexRef.current;
+        if (!layer || !tex) return;
+
+        const spriteMap = projectileSpritesRef.current;
+
+        const aliveIds = new Set<string>();
+        for (const p of projectiles) {
+            aliveIds.add(p.id);
+            let spr = spriteMap.get(p.id);
+            if (!spr) {
+                spr = new PIXI.Sprite(tex);
+                spr.anchor.set(0.5, 0.5);
+                spr.zIndex = 9999; // 유닛보다 위에 (layer 자체가 위라 사실 상관없음)
+                layer.addChild(spr);
+                spriteMap.set(p.id, spr);
+            }
+            spr.position.set(p.x, p.y);
+            spr.rotation = Math.atan2(p.vy, p.vx);
+            spr.scale.set(0.8, 0.8);
+        }
+
+        // 안 남은 투사체 제거
+        for (const [id, spr] of spriteMap.entries()) {
+            if (!aliveIds.has(id)) {
+                spr.parent?.removeChild(spr);
+                spr.destroy();
+                spriteMap.delete(id);
+            }
+        }
+    }, [projectiles]);
+
+
     return (
         <div
+            className="canvas-wrap"
             style={{
+                // 폭/높이는 CSS에서 제어하고,
+                // 여기서는 위치/그림자만 담당
                 position: "relative",
-                width: "100%",
-                height: "100%",
-                overflow: "hidden",
-                background: "#020617",
-                borderRadius: 12,
                 boxShadow: "0 8px 24px rgba(15,23,42,0.6)",
             }}
         >
-            {/* Pixi 캔버스 컨테이너 */}
+            {/* Pixi 캔버스 컨테이너 (resizeTo 대상) */}
             <div
                 ref={wrapRef}
                 style={{
@@ -346,6 +405,7 @@ export function GameCanvas() {
             <GameBase side="enemy" />
         </div>
     );
+
 }
 
 /**
