@@ -1,5 +1,5 @@
 // src/components/GameCanvas.tsx
-// ★ 애니메이션 스프라이트 버전
+// PixiJS 기반 전투 보드 + 유닛 스프라이트 렌더러
 import React, { useEffect, useRef } from "react";
 import * as PIXI from "pixi.js";
 import { useGameStore } from "../state/gameStore";
@@ -10,209 +10,260 @@ import {
     setUnitAnimation,
     unitKindFromDiff,
     type AnimName,
+    preloadUnitAnims,
 } from "../gfx/unitAnims";
 
+/**
+ * 메인 전투 캔버스
+ * - 상단에 아군/적 기지 HP UI
+ * - 중앙에는 PixiJS로 라인 / 유닛 렌더링
+ */
 export function GameCanvas() {
     const wrapRef = useRef<HTMLDivElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
     const appRef = useRef<PIXI.Application | null>(null);
 
-    // 레인 수 변화에만 반응, 나머지 상태는 store.getState 로 직접 읽음
-    const laneCount = useGameStore((s) => s.laneCount);
+    const laneCount = useGameStore((s) => s.laneCount ?? 3);
 
     useEffect(() => {
+        const wrap = wrapRef.current;
+        if (!wrap) return;
+
         let destroyed = false;
 
-        const wrap = wrapRef.current;
-        const canvas = canvasRef.current;
-        if (!wrap || !canvas) return;
+        // 기존 앱 정리 (laneCount가 바뀌면 재생성)
+        if (appRef.current) {
+            appRef.current.destroy(true);
+            appRef.current = null;
+        }
 
-        const app = new PIXI.Application({
-            view: canvas,
-            resizeTo: wrap,
-            backgroundColor: 0x020617,
-            antialias: true,
-            autoDensity: true,
-        });
-
+        const app = new PIXI.Application();
         appRef.current = app;
 
-        const root = app.stage;
-        root.removeChildren();
-
-        const lanesLayer = new PIXI.Container();
-        const unitsLayer = new PIXI.Container();
-        unitsLayer.sortableChildren = true;
-
-        root.addChild(lanesLayer);
-        root.addChild(unitsLayer);
-
-        // 유닛별 스프라이트 캐시
+        // 유닛 스프라이트 캐시
         const spriteMap = new Map<string, PIXI.AnimatedSprite>();
+        let lanesLayer: PIXI.Container | null = null;
+        let unitsLayer: PIXI.Container | null = null;
+        let resizeObserver: ResizeObserver | null = null;
 
-        // 전역 스테이지 사이즈 초기화 (spawn에서 사용)
-        (globalThis as any)._stageWidth = wrap.clientWidth;
-        (globalThis as any)._stageHeight = wrap.clientHeight;
+        // 유닛 애니메이션 선택
+        function pickAnimForUnit(u: UnitEnt, idToUnit: Map<string, UnitEnt>): AnimName {
+            if ((u as any).moving) {
+                return "run";
+            }
 
-        // 레인/가이드라인 그리기
+            if ((u as any).targetId) {
+                const t = idToUnit.get((u as any).targetId);
+                if (t) {
+                    const dx = t.x - u.x;
+                    const dy = t.y - u.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist <= u.range + 4) {
+                        return "attack";
+                    }
+                }
+            }
+            return "idle";
+        }
+
+        // 보드 라인/배경 다시 그리기
         function redrawLanes() {
+            if (!lanesLayer || !app.renderer) return;
+
             lanesLayer.removeChildren();
+
             const w = app.renderer.width;
             const h = app.renderer.height;
 
             drawBoardFrame(lanesLayer, w, h);
             drawLanes(lanesLayer, w, h, laneCount);
+
+            // Stage 사이즈를 전역으로도 저장 (물리 계산 등에서 사용할 때)
+            (window as any)._LB_STAGE_W = w;
+            (window as any)._LB_STAGE_H = h;
         }
 
-        // 처음 1회 + 리사이즈 때마다 갱신
-        redrawLanes();
-
-        const resizeObserver = new ResizeObserver(() => {
-            if (destroyed) return;
-            app.renderer.resize(wrap.clientWidth, wrap.clientHeight);
-            redrawLanes();
-
-            // 전역 스테이지 사이즈 → gameStore.spawn에서 참고
-            (globalThis as any)._stageWidth = wrap.clientWidth;
-            (globalThis as any)._stageHeight = wrap.clientHeight;
-        });
-
-        resizeObserver.observe(wrap);
-
-        // PIXI ticker
+        // 게임 루프 (Pixi ticker -> zustand advance + 스프라이트 동기화)
         const tick: PIXI.TickerCallback<PIXI.Ticker> = (ticker) => {
-            if (destroyed) return;
+            if (destroyed || !app.renderer || !unitsLayer) return;
 
             const dtSec = ticker.deltaTime / 60;
+            const state = useGameStore.getState() as any;
 
-            const state = useGameStore.getState();
-            const { advance, paused } = state as any;
-
-            const stageWidth = app.renderer.width;
-            const stageHeight = app.renderer.height;
-
-            if (!paused && typeof advance === "function") {
-                advance(dtSec, stageWidth, stageHeight);
+            if (typeof state.advance === "function") {
+                state.advance(dtSec, app.renderer.width, app.renderer.height);
             }
 
-            const units = (useGameStore.getState().units ?? []) as UnitEnt[];
+            const units: UnitEnt[] = (state.units ?? []) as UnitEnt[];
             const idToUnit = new Map<string, UnitEnt>();
             for (const u of units) idToUnit.set(u.id, u);
 
-            // 정렬 기준: lane -> y -> x
-            const sorted = [...units].sort((a, b) => {
-                if (a.lane !== b.lane) return a.lane - b.lane;
-                if (a.y !== b.y) return a.y - b.y;
-                return a.x - b.x;
-            });
-
-            const alive = new Set(sorted.map((u) => u.id));
-
-            // 생성/업데이트
-            sorted.forEach((u) => {
-                let sprite = spriteMap.get(u.id);
-                const kind = unitKindFromDiff(u.diff);
-
-                if (!sprite) {
-                    const created = createUnitSprite(kind, "idle");
-                    if (!created) return;
-                    sprite = created;
-                    unitsLayer.addChild(sprite);
-                    spriteMap.set(u.id, sprite);
-                }
-
-                // 애니메이션 상태 선택
-                const anim = pickAnimForUnit(u, idToUnit);
-                setUnitAnimation(sprite, kind, anim);
-
-                // 위치/방향/정렬
-                sprite.position.set(u.x, u.y);
-                const baseScale = 0.7;
-                const dir = u.side === "ally" ? 1 : -1;
-                sprite.scale.set(baseScale * dir, baseScale);
-
-                // zIndex: 레인/세로 기준으로 자연스럽게 앞뒤가 갈리게
-                sprite.zIndex = u.y + u.lane * 1000;
-            });
-
-            // 제거된 유닛 스프라이트 정리
-            for (const [id, sprite] of spriteMap) {
-                if (!alive.has(id)) {
-                    sprite.destroy(true);
+            // 1) 없어질 유닛 제거
+            for (const [id, sprite] of spriteMap.entries()) {
+                if (!idToUnit.has(id)) {
+                    sprite.parent?.removeChild(sprite);
+                    sprite.destroy();
                     spriteMap.delete(id);
                 }
             }
+
+            // 2) 유닛별 스프라이트 생성/업데이트
+            for (const u of units) {
+                const kind = unitKindFromDiff(u.diff);
+                let sprite = spriteMap.get(u.id);
+
+                if (!sprite) {
+                    const created = createUnitSprite(kind, "idle");
+                    if (!created) continue;
+                    sprite = created;
+                    spriteMap.set(u.id, sprite);
+
+                    // 레인에 따라 약간 zIndex 변화 (위쪽 레인이 뒤에 보이도록)
+                    sprite.zIndex = 10 + u.lane;
+                    unitsLayer.addChild(sprite);
+                }
+
+                // 위치 / zIndex 업데이트
+                sprite.position.set(u.x, u.y);
+                sprite.zIndex = 10 + u.lane;
+
+                // 애니메이션 상태 선택
+                const desiredAnim = pickAnimForUnit(u, idToUnit);
+                setUnitAnimation(sprite, kind, desiredAnim);
+            }
         };
 
-        app.ticker.add(tick);
+        // Pixi Application 초기화 (v8 스타일)
+        app.init({
+            resizeTo: wrap,
+            backgroundColor: 0x020617,
+            antialias: true,
+            autoDensity: true,
+        }).then(async () => {
+            if (destroyed) {
+                app.destroy(true);
+                return;
+            }
+
+            await preloadUnitAnims();
+
+            // 기존 DOM 정리 후 Pixi 캔버스 붙이기
+            wrap.innerHTML = "";
+            wrap.appendChild(app.canvas);
+
+            const root = app.stage;
+            root.removeChildren();
+
+            lanesLayer = new PIXI.Container();
+            unitsLayer = new PIXI.Container();
+            unitsLayer.sortableChildren = true;
+
+            root.addChild(lanesLayer);
+            root.addChild(unitsLayer);
+
+            redrawLanes();
+
+            resizeObserver = new ResizeObserver(() => {
+                if (destroyed) return;
+                redrawLanes();
+            });
+            resizeObserver.observe(wrap);
+
+            app.ticker.add(tick);
+        });
 
         return () => {
             destroyed = true;
+
+            if (resizeObserver) {
+                resizeObserver.disconnect();
+                resizeObserver = null;
+            }
+
             app.ticker.remove(tick);
-            spriteMap.forEach((s) => s.destroy(true));
+
+            // 스프라이트 정리
+            for (const sprite of spriteMap.values()) {
+                sprite.parent?.removeChild(sprite);
+                sprite.destroy();
+            }
             spriteMap.clear();
-            resizeObserver.disconnect();
+
             app.destroy(true);
             appRef.current = null;
         };
     }, [laneCount]);
 
     return (
-        <GameBase>
+        <div
+            style={{
+                position: "relative",
+                width: "100%",
+                height: "100%",
+                overflow: "hidden",
+                background: "#020617",
+                borderRadius: 12,
+                boxShadow: "0 8px 24px rgba(15,23,42,0.6)",
+            }}
+        >
+            {/* Pixi 캔버스 컨테이너 */}
             <div
                 ref={wrapRef}
-                style={{ width: "100%", height: "100%", position: "relative" }}
-            >
-                <canvas ref={canvasRef} />
-            </div>
-        </GameBase>
+                style={{
+                    width: "100%",
+                    height: "100%",
+                }}
+            />
+
+            {/* 기지: 보드 높이 기준 세로 중앙, 좌우에 배치 */}
+            <GameBase side="ally" />
+            <GameBase side="enemy" />
+        </div>
     );
 }
 
-/** 보드 외곽선 */
+/**
+ * 보드 바깥 테두리 등 기본 프레임
+ */
 function drawBoardFrame(layer: PIXI.Container, w: number, h: number) {
     const g = new PIXI.Graphics();
-    g.roundRect(4, 4, w - 8, h - 8, 12).stroke({ color: 0x0f172a, width: 2 });
+
+    const padding = 24;
+    const rectW = Math.max(0, w - padding * 2);
+    const rectH = Math.max(0, h - padding * 2);
+
+    g.rect(padding, padding, rectW, rectH)
+        .fill({ color: 0x020617, alpha: 1 })
+        .stroke({ width: 2, color: 0x1f2937, alignment: 0 });
+
+    // 중앙 세로 라인 (양 진영 경계 느낌)
+    const midX = padding + rectW / 2;
+    g.moveTo(midX, padding)
+        .lineTo(midX, padding + rectH)
+        .stroke({ width: 1, color: 0x111827, alpha: 0.7 });
+
     layer.addChild(g);
 }
 
-/** 레인 가이드 */
-function drawLanes(
-    layer: PIXI.Container,
-    w: number,
-    h: number,
-    lanes: number
-) {
-    const L = Math.max(1, Math.floor(lanes));
-    for (let i = 0; i < L; i++) {
-        const y0 = (h / L) * i;
-        const y1 = (h / L) * (i + 1);
-        const gh = new PIXI.Graphics();
-        gh.rect(8, y0 + 8, w - 16, y1 - y0 - 16).stroke({
-            color: 0x1e293b,
-            width: 1,
-            alpha: 0.7,
-        });
-        layer.addChild(gh);
-    }
-}
-
 /**
- * 유닛 상태(이동/공격)에 따라 어떤 애니메이션을 쓸지 간단히 결정
- * - targetId가 있고 사거리 안이면 attack
- * - 나머지는 idle
+ * 레인 구분선
  */
-function pickAnimForUnit(u: UnitEnt, idToUnit: Map<string, UnitEnt>): AnimName {
-    if (u.targetId) {
-        const t = idToUnit.get(u.targetId);
-        if (t) {
-            const dx = t.x - u.x;
-            const dy = t.y - u.y;
-            const dist = Math.hypot(dx, dy);
-            if (dist <= u.range + 4) {
-                return "attack";
-            }
-        }
+function drawLanes(layer: PIXI.Container, w: number, h: number, laneCount: number) {
+    const g = new PIXI.Graphics();
+
+    const padding = 24;
+    const rectW = Math.max(0, w - padding * 2);
+    const rectH = Math.max(0, h - padding * 2);
+
+    if (laneCount <= 0) return;
+
+    const laneHeight = rectH / laneCount;
+
+    for (let i = 1; i < laneCount; i++) {
+        const y = padding + laneHeight * i;
+        g.moveTo(padding, y)
+            .lineTo(padding + rectW, y)
+            .stroke({ width: 1, color: 0x111827, alpha: 0.7 });
     }
-    return "idle";
+
+    layer.addChild(g);
 }

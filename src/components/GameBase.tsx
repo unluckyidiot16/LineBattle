@@ -16,8 +16,8 @@ export const GameBase: React.FC<Props> = ({ side }) => {
 
     const align: React.CSSProperties =
         side === "ally"
-            ? { left: 8, alignItems: "flex-start" }
-            : { right: 8, alignItems: "flex-end" };
+            ? { left: 24, alignItems: "flex-start" }
+            : { right: 24, alignItems: "flex-end" };
 
     return (
         <div

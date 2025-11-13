@@ -1,17 +1,18 @@
-// src/gfx/unitAnims.ts
+// src/gfx/unitAnims.ts ★ 전체 교체 (Pixi v8 대응 + 6종 유닛)
+
 import * as PIXI from "pixi.js";
 
-// 전투에서 사용할 유닛 종류 (6종)
+// 전투에서 사용할 유닛 종류
 export type UnitKind =
+    | "warrior"
+    | "lancer"
     | "archer"
     | "healer"
-    | "lancer"
     | "pawn"
-    | "pawnArcher"
-    | "warrior";
+    | "pawnArcher";
 
-// 현재는 idle / run / attack 3가지 상태만 사용
-export type AnimName = "idle" | "run" | "attack";
+// 현재는 idle / run / attack 3가지만 사용
+export type AnimName = "idle" | "attack" | "run";
 
 export type AnimSheetDef = {
     /** 스프라이트 시트 경로 (Vite 기준: public/ 이하 또는 정적 경로) */
@@ -28,194 +29,191 @@ export type AnimSheetDef = {
     loop: boolean;
 };
 
+// 내부: 모든 애니메이션 정의를 모아두는 리스트 (preload용)
+const ALL_DEFS: AnimSheetDef[] = [];
+
+function collect(def: AnimSheetDef): AnimSheetDef {
+    ALL_DEFS.push(def);
+    return def;
+}
+
 /**
  * 유닛별 애니메이션 메타데이터
  * - 실제 PNG 파일은 public/assets/units/... 등 원하는 위치에 두고,
  *   src 경로만 맞춰주면 됩니다.
  *
- * ★ 해상도
- *   - Lancer: 320 x 320
- *   - 나머지: 192 x 192
- *
- * ★ 프레임 수
- *   Archer      [Idle: 6 | Run: 4 | Attack: 8]
- *   Healer      [Idle: 6 | Run: 4 | Attack: 11]
- *   Lancer      [Idle:12 | Run: 6 | Attack: 3]
- *   Pawn        [Idle: 6 | Run: 6 | Attack: 6]
- *   PawnArcher  [Idle: 6 | Run: 6 | Attack: 8]
- *   Warrior     [Idle: 8 | Run: 6 | Attack: 4]
+ * ⚠️ 파일 이름/경로는 프로젝트 실제 구조에 맞게 수정해 주세요.
  */
 export const UNIT_ANIMS: Record<
     UnitKind,
     Partial<Record<AnimName, AnimSheetDef>>
 > = {
-    archer: {
-        idle: {
-            src: "/assets/units/archer/Archer_Idle.png",
-            frameWidth: 192,
-            frameHeight: 192,
-            frames: 6,
-            fps: 6,
-            loop: true,
-        },
-        run: {
-            src: "/assets/units/archer/Archer_Run.png",
-            frameWidth: 192,
-            frameHeight: 192,
-            frames: 4,
-            fps: 10,
-            loop: true,
-        },
-        attack: {
-            // 업로드된 시트: Archer_Attack.png (192 x 1536 → 8프레임)
-            src: "/assets/units/archer/Archer_Attack.png",
-            frameWidth: 192,
-            frameHeight: 192,
-            frames: 8,
-            fps: 12,
-            loop: true,
-        },
-    },
-
-    healer: {
-        idle: {
-            src: "/assets/units/healer/Healer_Idle.png",
-            frameWidth: 192,
-            frameHeight: 192,
-            frames: 6,
-            fps: 6,
-            loop: true,
-        },
-        run: {
-            src: "/assets/units/healer/Healer_Run.png",
-            frameWidth: 192,
-            frameHeight: 192,
-            frames: 4,
-            fps: 10,
-            loop: true,
-        },
-        attack: {
-            // 업로드된 시트: Attack.png (186 x 2048 → 11프레임)
-            // 힐 연출을 attack 상태로 사용
-            src: "/assets/units/healer/Attack.png",
-            frameWidth: 186,
-            frameHeight: 186,
-            frames: 11,
-            fps: 12,
-            loop: true,
-        },
-    },
-
-    lancer: {
-        idle: {
-            src: "/assets/units/lancer/Lancer_Idle.png",
-            frameWidth: 320,
-            frameHeight: 320,
-            frames: 12,
-            fps: 6,
-            loop: true,
-        },
-        run: {
-            src: "/assets/units/lancer/Lancer_Run.png",
-            frameWidth: 320,
-            frameHeight: 320,
-            frames: 6,
-            fps: 10,
-            loop: true,
-        },
-        attack: {
-            // 업로드된 시트: Lancer_Attack.png (320 x 960 → 3프레임)
-            src: "/assets/units/lancer/Lancer_Attack.png",
-            frameWidth: 320,
-            frameHeight: 320,
-            frames: 3,
-            fps: 12,
-            loop: true,
-        },
-    },
-
-    pawn: {
-        idle: {
-            src: "/assets/units/pawn/Pawn_Idle.png",
-            frameWidth: 192,
-            frameHeight: 192,
-            frames: 6,
-            fps: 6,
-            loop: true,
-        },
-        run: {
-            src: "/assets/units/pawn/Pawn_Run.png",
-            frameWidth: 192,
-            frameHeight: 192,
-            frames: 6,
-            fps: 10,
-            loop: true,
-        },
-        attack: {
-            // 업로드된 시트: Pawn_Attack.png (192 x 1152 → 6프레임)
-            src: "/assets/units/pawn/Pawn_Attack.png",
-            frameWidth: 192,
-            frameHeight: 192,
-            frames: 6,
-            fps: 12,
-            loop: true,
-        },
-    },
-
-    pawnArcher: {
-        idle: {
-            src: "/assets/units/pawnArcher/PawnArcher_Idle.png",
-            frameWidth: 192,
-            frameHeight: 192,
-            frames: 6,
-            fps: 6,
-            loop: true,
-        },
-        run: {
-            src: "/assets/units/pawnArcher/PawnArcher_Run.png",
-            frameWidth: 192,
-            frameHeight: 192,
-            frames: 6,
-            fps: 10,
-            loop: true,
-        },
-        attack: {
-            // 업로드된 시트: PawnArcher_Attack.png (192 x 1536 → 8프레임)
-            src: "/assets/units/pawnArcher/PawnArcher_Attack.png",
-            frameWidth: 192,
-            frameHeight: 192,
-            frames: 8,
-            fps: 12,
-            loop: true,
-        },
-    },
-
+    // Warrior (192x192, Idle 8 / Run 6 / Attack 4)
     warrior: {
-        idle: {
+        idle: collect({
             src: "/assets/units/warrior/Warrior_Idle.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 8,
             fps: 6,
             loop: true,
-        },
-        run: {
+        }),
+        run: collect({
             src: "/assets/units/warrior/Warrior_Run.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 6,
             fps: 10,
             loop: true,
-        },
-        attack: {
-            // 업로드된 시트: Warrior_Attack.png (192 x 768 → 4프레임)
+        }),
+        attack: collect({
             src: "/assets/units/warrior/Warrior_Attack.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 4,
             fps: 12,
+            loop: false,
+        }),
+    },
+
+    // Lancer (320x320, Idle 12 / Run 6 / Attack 3)
+    lancer: {
+        idle: collect({
+            src: "/assets/units/lancer/Lancer_Idle.png",
+            frameWidth: 320,
+            frameHeight: 320,
+            frames: 12,
+            fps: 6,
             loop: true,
-        },
+        }),
+        run: collect({
+            src: "/assets/units/lancer/Lancer_Run.png",
+            frameWidth: 320,
+            frameHeight: 320,
+            frames: 6,
+            fps: 10,
+            loop: true,
+        }),
+        attack: collect({
+            src: "/assets/units/lancer/Lancer_Attack.png",
+            frameWidth: 320,
+            frameHeight: 320,
+            frames: 3,
+            fps: 12,
+            loop: false,
+        }),
+    },
+
+    // Archer (192x192, Idle 6 / Run 4 / Attack 8)
+    archer: {
+        idle: collect({
+            src: "/assets/units/archer/Archer_Idle.png",
+            frameWidth: 192,
+            frameHeight: 192,
+            frames: 6,
+            fps: 6,
+            loop: true,
+        }),
+        run: collect({
+            src: "/assets/units/archer/Archer_Run.png",
+            frameWidth: 192,
+            frameHeight: 192,
+            frames: 4,
+            fps: 10,
+            loop: true,
+        }),
+        attack: collect({
+            src: "/assets/units/archer/Archer_Attack.png",
+            frameWidth: 192,
+            frameHeight: 192,
+            frames: 8,
+            fps: 12,
+            loop: false,
+        }),
+    },
+
+    // Healer (192x192, Idle 6 / Run 4 / Attack 11) - 공격 대신 힐 연출
+    healer: {
+        idle: collect({
+            src: "/assets/units/healer/Healer_Idle.png",
+            frameWidth: 192,
+            frameHeight: 192,
+            frames: 6,
+            fps: 6,
+            loop: true,
+        }),
+        run: collect({
+            src: "/assets/units/healer/Healer_Run.png",
+            frameWidth: 192,
+            frameHeight: 192,
+            frames: 4,
+            fps: 10,
+            loop: true,
+        }),
+        attack: collect({
+            src: "/assets/units/healer/Healer_Attack.png",
+            frameWidth: 192,
+            frameHeight: 192,
+            frames: 11,
+            fps: 12,
+            loop: false,
+        }),
+    },
+
+    // Pawn (192x192, Idle 6 / Run 6 / Attack 6)
+    pawn: {
+        idle: collect({
+            src: "/assets/units/pawn/Pawn_Idle.png",
+            frameWidth: 192,
+            frameHeight: 192,
+            frames: 6,
+            fps: 6,
+            loop: true,
+        }),
+        run: collect({
+            src: "/assets/units/pawn/Pawn_Run.png",
+            frameWidth: 192,
+            frameHeight: 192,
+            frames: 6,
+            fps: 10,
+            loop: true,
+        }),
+        attack: collect({
+            src: "/assets/units/pawn/Pawn_Attack.png",
+            frameWidth: 192,
+            frameHeight: 192,
+            frames: 6,
+            fps: 12,
+            loop: false,
+        }),
+    },
+
+    // PawnArcher (192x192, Idle 6 / Run 6 / Attack 8)
+    pawnArcher: {
+        idle: collect({
+            src: "/assets/units/pawnArcher/PawnArcher_Idle.png",
+            frameWidth: 192,
+            frameHeight: 192,
+            frames: 6,
+            fps: 6,
+            loop: true,
+        }),
+        run: collect({
+            src: "/assets/units/pawnArcher/PawnArcher_Run.png",
+            frameWidth: 192,
+            frameHeight: 192,
+            frames: 6,
+            fps: 10,
+            loop: true,
+        }),
+        attack: collect({
+            src: "/assets/units/pawnArcher/PawnArcher_Attack.png",
+            frameWidth: 192,
+            frameHeight: 192,
+            frames: 8,
+            fps: 12,
+            loop: false,
+        }),
     },
 };
 
@@ -226,18 +224,28 @@ function makeKey(def: AnimSheetDef): string {
     return `${def.src}|${def.frameWidth}x${def.frameHeight}|${def.frames}`;
 }
 
-function getTextures(def: AnimSheetDef): PIXI.Texture[] {
+/**
+ * Pixi v8에서는 Texture.from이 로딩을 하지 않기 때문에,
+ * 반드시 Assets.load(...)로 미리 로딩된 텍스처를 사용해야 한다.
+ */
+function getTextures(def: AnimSheetDef): PIXI.Texture[] | null {
     const key = makeKey(def);
     const cached = textureCache.get(key);
     if (cached) return cached;
 
-    const base = PIXI.BaseTexture.from(def.src);
+    const baseTex = PIXI.Assets.get(def.src) as PIXI.Texture | undefined;
+    if (!baseTex) {
+        // 아직 로딩 안 된 경우: null 반환 (다음 프레임에 다시 시도)
+        console.warn("[unitAnims] texture not loaded yet:", def.src);
+        return null;
+    }
+
     const list: PIXI.Texture[] = [];
 
     for (let i = 0; i < def.frames; i++) {
         list.push(
             new PIXI.Texture({
-                baseTexture: base,
+                source: baseTex.source,
                 frame: new PIXI.Rectangle(
                     i * def.frameWidth,
                     0,
@@ -256,15 +264,24 @@ function resolveAnimDef(kind: UnitKind, anim: AnimName): AnimSheetDef | null {
     const table = UNIT_ANIMS[kind];
     if (!table) return null;
 
-    // 우선 순위: 요청 anim → idle → attack → run
+    // 우선 순위: 요청 anim → idle → run → attack
     const direct = table[anim];
     if (direct) return direct;
-
     if (anim !== "idle" && table.idle) return table.idle;
-    if (anim !== "attack" && table.attack) return table.attack;
     if (anim !== "run" && table.run) return table.run;
-
+    if (anim !== "attack" && table.attack) return table.attack;
     return null;
+}
+
+/**
+ * 유닛 스프라이트 시트 전부 미리 로딩
+ * - GameCanvas에서 app.init() 이후에 한 번만 호출해 주세요.
+ */
+export async function preloadUnitAnims(): Promise<void> {
+    const ids = Array.from(new Set(ALL_DEFS.map((d) => d.src)));
+    if (!ids.length) return;
+
+    await PIXI.Assets.load(ids);
 }
 
 /**
@@ -278,11 +295,18 @@ export function createUnitSprite(
     if (!def) return null;
 
     const tex = getTextures(def);
+    if (!tex || tex.length === 0) return null;
+
     const sprite = new PIXI.AnimatedSprite(tex);
     sprite.loop = def.loop;
-    sprite.animationSpeed = def.fps > 0 ? def.fps / 60 : 0; // 60fps 기준
+    sprite.animationSpeed = def.fps > 0 ? def.fps / 60 : 0;
     sprite.anchor.set(0.5, 0.5);
-    if (def.fps > 0) sprite.play();
+
+    if (def.fps > 0) {
+        sprite.play();
+    } else {
+        sprite.gotoAndStop(0);
+    }
 
     (sprite as any)._unitKind = kind;
     (sprite as any)._animName = anim;
@@ -307,6 +331,8 @@ export function setUnitAnimation(
     if (!def) return;
 
     const tex = getTextures(def);
+    if (!tex || tex.length === 0) return;
+
     sprite.textures = tex;
     sprite.loop = def.loop;
     sprite.animationSpeed = def.fps > 0 ? def.fps / 60 : 0;
@@ -322,15 +348,16 @@ export function setUnitAnimation(
 }
 
 /**
- * diff(난이도)를 유닛 종류에 매핑
- * - 추후 UnitEnt 안에 kind 필드를 직접 넣는 방식으로 교체 예정.
+ * diff(난이도)를 임시로 유닛 종류에 매핑
+ * - 나중에는 UnitEnt 안에 kind 필드를 추가해서 교체하면 됩니다.
  */
 export function unitKindFromDiff(diff: number): UnitKind {
     const d = Math.max(1, Math.min(6, diff));
+
     if (d === 1) return "pawn";
     if (d === 2) return "pawnArcher";
     if (d === 3) return "warrior";
     if (d === 4) return "lancer";
     if (d === 5) return "archer";
-    return "healer"; // d === 6
+    return "healer";
 }
