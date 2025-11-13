@@ -479,8 +479,66 @@ export function GameCanvas() {
                 if (vs.justHealed) {
                     spawnHealEffect(u);
                 }
-                
             }
+
+            // ------------------------------------------------
+            // 5) 캐슬 흔들기 + 파괴 텍스처 적용
+            // ------------------------------------------------
+            const basePos = castleBasePosRef.current;
+            const sprAlly = castleAllyRef.current;
+            const sprEnemy = castleEnemyRef.current;
+            const tex = castleTexturesRef.current;
+
+            if (basePos) {
+                const SHAKE_BASE = 4; // 흔들리는 최대 픽셀 정도 (필요하면 조정)
+
+                // ─ ally 캐슬 ─
+                if (sprAlly) {
+                    let offX = 0;
+                    let offY = 0;
+
+                    if (castleHitRef.current.allyHitTimer > 0) {
+                        const t = castleHitRef.current.allyHitTimer / HIT_SHAKE_TIME; // 0~1
+                        const mag = SHAKE_BASE * t;
+                        offX = (Math.random() - 0.5) * mag;
+                        offY = (Math.random() - 0.5) * mag;
+                    }
+
+                    sprAlly.position.set(
+                        basePos.allyX + offX,
+                        basePos.allyY + offY
+                    );
+
+                    // HP 0 이하 → 파괴 텍스처
+                    if (state.baseAlly <= 0 && tex.destroyed) {
+                        sprAlly.texture = tex.destroyed;
+                    }
+                }
+
+                // ─ enemy 캐슬 ─
+                if (sprEnemy) {
+                    let offX = 0;
+                    let offY = 0;
+
+                    if (castleHitRef.current.enemyHitTimer > 0) {
+                        const t = castleHitRef.current.enemyHitTimer / HIT_SHAKE_TIME;
+                        const mag = SHAKE_BASE * t;
+                        offX = (Math.random() - 0.5) * mag;
+                        offY = (Math.random() - 0.5) * mag;
+                    }
+
+                    sprEnemy.position.set(
+                        basePos.enemyX + offX,
+                        basePos.enemyY + offY
+                    );
+
+                    if (state.baseEnemy <= 0 && tex.destroyed) {
+                        sprEnemy.texture = tex.destroyed;
+                    }
+                }
+            }
+
+
         };
 
         // Pixi Application 초기화 (v8 스타일)
