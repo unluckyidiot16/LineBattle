@@ -144,16 +144,15 @@ export function GameCanvas() {
 
             const spr = new PIXI.AnimatedSprite(frames);
 
-            // Pixi 스프라이트 앵커: 가운데 기준
+            // Pixi 스프라이트 앵커: 스프라이트 중앙
             spr.anchor.set(0.5, 0.5);
 
-            // radius 기준으로 머리 위 위치 계산
-            const HEAD_OFFSET = u.radius * 2.2; // 감으로 잡은 값, 필요하면 조절
+            // 유닛 좌표 기준으로 살짝 위쪽에만 올리기 (고정 값)
             const px = u.x;
-            const py = u.y - HEAD_OFFSET;
+            const py = u.y - 24; // 필요하면 16~32 사이에서 감으로 조절
 
             spr.position.set(px, py);
-            spr.zIndex = py + 6000; // y 기준으로 위에 쌓이게
+            spr.zIndex = py + 6000;
             spr.scale.set(0.7);
             spr.animationSpeed = 0.4;
             spr.loop = false;
@@ -168,6 +167,8 @@ export function GameCanvas() {
             layer.addChild(spr);
             spr.play();
         }
+
+
 
 
         // 내부 시간(초) – 애니메이션 락/스폰 딜레이 계산용
@@ -186,7 +187,10 @@ export function GameCanvas() {
             stageWidth: number,
             dtSec: number
         ): AnimName {
-            // 0) 피격 감지 → focus를 unit으로 전환
+            // 🔹 0) 1프레임짜리 플래그 초기화 (힐 FX용)
+            vs.justHealed = false;
+
+            // 0-1) 피격 감지 → focus를 unit으로 전환
             vs.hitTimer = Math.max(0, vs.hitTimer - dtSec);
 
             const HP_DELTA_EPS = 0.1;
@@ -200,7 +204,7 @@ export function GameCanvas() {
 
             // 2) 힐: HP 증가
             if (deltaHp > HP_DELTA_EPS) {
-                const HEAL_FX_INTERVAL = 0.5; // 최소 0.5초 간격으로만 FX
+                const HEAL_FX_INTERVAL = 1; // 최소 1초 간격으로만 FX
                 if (timeSec - vs.lastHealFxTime > HEAL_FX_INTERVAL) {
                     vs.justHealed = true;
                     vs.lastHealFxTime = timeSec;
