@@ -25,6 +25,19 @@ type UnitVisualState = {
     lastHealFxTime: number;     // 마지막 힐 이펙트 시각
 };
 
+type TileNinePatch = {
+    center: PIXI.Texture;
+    top: PIXI.Texture;
+    bottom: PIXI.Texture;
+    left: PIXI.Texture;
+    right: PIXI.Texture;
+    topLeft: PIXI.Texture;
+    topRight: PIXI.Texture;
+    bottomLeft: PIXI.Texture;
+    bottomRight: PIXI.Texture;
+};
+
+
 /**
  * 메인 전투 캔버스
  * - 양쪽 기지 HP UI
@@ -50,6 +63,8 @@ export function GameCanvas() {
     const castleAllyRef = useRef<PIXI.Sprite | null>(null);
     const castleEnemyRef = useRef<PIXI.Sprite | null>(null);
 
+    const tileTexturesRef = useRef<TileNinePatch | null>(null);
+    
     // 성의 "기본 위치" (흔들기 전 기준점)
     const castleBasePosRef = useRef({
         allyX: 0,
@@ -317,34 +332,53 @@ export function GameCanvas() {
 
             const w = app.renderer.width;
             const h = app.renderer.height;
-
-            drawLanes(lanesLayer, w, h, laneCount);
-
+            
+            drawLanes(lanesLayer, w, h, laneCount, tileTexturesRef.current);
+            
             // ★ 게임 시뮬레이션 쪽에서 참조하는 전역 스테이지 크기
             (window as any)._LB_STAGE_W = w;
             (window as any)._LB_STAGE_H = h;
 
             // ★ 성(본진) 기본 위치 업데이트
-            // gameSim.ts에서 margin = 24, baseAllyX = margin, baseEnemyX = stageWidth - margin 이라
-            // 여기서도 동일하게 맞춰줌
+            // gameSim.ts에서 margin = 24, baseAllyX = margin, baseEnemyX = stageWidth - margin 을 쓰지만
+            // 여기서는 "성 스프라이트가 맵 안쪽에 완전히 들어오도록" 절반만큼 안쪽으로 밀어준다.
             const margin = 24;
             const centerY = h / 2;
 
+            const sprAlly = castleAllyRef.current;
+            const sprEnemy = castleEnemyRef.current;
+
+            // 기본값(텍스처 없을 때 대비)
+            let allyX = margin;
+            let enemyX = w - margin;
+
+            // 스프라이트 폭 기준으로 절반만큼 안쪽으로 이동
+            if (sprAlly) {
+                const allyHalfW =
+                    (sprAlly.width * Math.abs(sprAlly.scale.x || 1)) * 0.5;
+                allyX = margin + allyHalfW;
+            }
+
+            if (sprEnemy) {
+                const enemyHalfW =
+                    (sprEnemy.width * Math.abs(sprEnemy.scale.x || 1)) * 0.5;
+                enemyX = w - margin - enemyHalfW;
+            }
+
             const basePos = castleBasePosRef.current;
-            basePos.allyX = margin;
+            basePos.allyX = allyX;
             basePos.allyY = centerY;
-            basePos.enemyX = w - margin;
+            basePos.enemyX = enemyX;
             basePos.enemyY = centerY;
 
-            const sprAlly = castleAllyRef.current;
+            // 실제 위치 반영
             if (sprAlly) {
                 sprAlly.position.set(basePos.allyX, basePos.allyY);
             }
-
-            const sprEnemy = castleEnemyRef.current;
             if (sprEnemy) {
                 sprEnemy.position.set(basePos.enemyX, basePos.enemyY);
             }
+
         }
 
 
@@ -553,6 +587,33 @@ export function GameCanvas() {
 
             await preloadUnitAnims();
 
+            // ★ 타일맵 3x3 로드 (64x64 타일)
+            try {
+                const tileTex = await PIXI.Assets.load("/assets/Tilemap_Flat-green.png") as PIXI.Texture;
+                const source = tileTex.source;
+                const TILE = 64;
+
+                const makeTile = (col: number, row: number) =>
+                    new PIXI.Texture({
+                        source,
+                        frame: new PIXI.Rectangle(col * TILE, row * TILE, TILE, TILE),
+                    });
+
+                tileTexturesRef.current = {
+                    topLeft: makeTile(0, 0),
+                    top: makeTile(1, 0),
+                    topRight: makeTile(2, 0),
+                    left: makeTile(0, 1),
+                    center: makeTile(1, 1),
+                    right: makeTile(2, 1),
+                    bottomLeft: makeTile(0, 2),
+                    bottom: makeTile(1, 2),
+                    bottomRight: makeTile(2, 2),
+                };
+            } catch (err) {
+                console.error("[Tiles] failed to load Tilemap_Flat-green.png", err);
+            }
+            
             // 기존 DOM 정리 후 Pixi 캔버스 붙이기
             wrap.innerHTML = "";
             wrap.appendChild(app.canvas);
@@ -732,30 +793,94 @@ function drawBoardFrame(layer: PIXI.Container, w: number, h: number) {
 
 
 /**
- * 레인 구분선
+ * 레인 타일 + 구분선 그리기
  */
 function drawLanes(
     layer: PIXI.Container,
     w: number,
     h: number,
-    laneCount: number
+    laneCount: number,
+    tiles?: TileNinePatch | null
 ) {
-    const g = new PIXI.Graphics();
-
     const padding = 24;
     const rectW = Math.max(0, w - padding * 2);
     const rectH = Math.max(0, h - padding * 2);
 
-    if (laneCount <= 0) return;
+    if (laneCount <= 0 || rectW <= 0 || rectH <= 0) return;
 
     const laneHeight = rectH / laneCount;
 
-    for (let i = 1; i < laneCount; i++) {
-        const y = padding + laneHeight * i;
-        g.moveTo(padding, y)
-            .lineTo(padding + rectW, y)
-            .stroke({ width: 1, color: 0x111827, alpha: 0.7 });
+    // =============================
+    // 1) 타일맵으로 바닥 깔기 (가로/세로 중앙 정렬)
+    // =============================
+    if (tiles && tiles.center) {
+        const TILE = 64;
+        const cols = Math.ceil(rectW / TILE);
+        const rows = Math.ceil(rectH / TILE);
+
+        const usedW = cols * TILE;
+        const usedH = rows * TILE;
+
+        // rect 영역 안에서 타일 전체가 "중앙"에 오도록 시작 위치 조정
+        const xStart = padding + (rectW - usedW) * 0.5;
+        const yStart = padding + (rectH - usedH) * 0.5;
+
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const isTop = row === 0;
+                const isBottom = row === rows - 1;
+                const isLeft = col === 0;
+                const isRight = col === cols - 1;
+
+                let tex: PIXI.Texture = tiles.center;
+
+                if (isTop && isLeft) tex = tiles.topLeft;
+                else if (isTop && isRight) tex = tiles.topRight;
+                else if (isBottom && isLeft) tex = tiles.bottomLeft;
+                else if (isBottom && isRight) tex = tiles.bottomRight;
+                else if (isTop) tex = tiles.top;
+                else if (isBottom) tex = tiles.bottom;
+                else if (isLeft) tex = tiles.left;
+                else if (isRight) tex = tiles.right;
+
+                const spr = new PIXI.Sprite(tex);
+                spr.anchor.set(0, 0);
+                spr.position.set(
+                    xStart + col * TILE,
+                    yStart + row * TILE
+                );
+                spr.zIndex = -20; // 유닛/성보다 뒤쪽
+                layer.addChild(spr);
+            }
+        }
+    } else {
+        // (체크 패턴 fallback 부분은 그대로 둬도 됨)
+        // ...
     }
 
-    layer.addChild(g);
+    // =============================
+    // 2) 레인 경계선 + 상하 테두리 (기존 그대로)
+    // =============================
+    const gLines = new PIXI.Graphics();
+
+    // 레인 사이 구분선
+    for (let i = 1; i < laneCount; i++) {
+        const y = padding + laneHeight * i;
+        gLines.moveTo(padding, y).lineTo(padding + rectW, y);
+    }
+
+    // 위/아래 테두리
+    gLines.moveTo(padding, padding).lineTo(padding + rectW, padding);
+    gLines
+        .moveTo(padding, padding + rectH)
+        .lineTo(padding + rectW, padding + rectH);
+
+    gLines.stroke({
+        width: 1,
+        color: 0x111827,
+        alpha: 0.9,
+    });
+
+    layer.addChild(gLines);
 }
+
