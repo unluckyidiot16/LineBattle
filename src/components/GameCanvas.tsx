@@ -4,7 +4,6 @@ import React, { useEffect, useRef } from "react";
 import * as PIXI from "pixi.js";
 import { useGameStore } from "../state/gameStore";
 import type { UnitEnt, ProjectileEnt } from "../state/gameStore";
-import { GameBase } from "./GameBase";
 import {
     createUnitSprite,
     setUnitAnimation,
@@ -701,8 +700,6 @@ export function GameCanvas() {
         <div
             className="canvas-wrap"
             style={{
-                // 폭/높이는 CSS에서 제어하고,
-                // 여기서는 위치/그림자만 담당
                 position: "relative",
                 boxShadow: "0 8px 24px rgba(15,23,42,0.6)",
             }}
@@ -716,11 +713,12 @@ export function GameCanvas() {
                 }}
             />
 
-            {/* 기지: 보드 높이 기준 세로 중앙, 좌우에 배치 */}
-            <GameBase side="ally" />
-            <GameBase side="enemy" />
+            {/* 본진 네모 UI 제거: 성 스프라이트만 사용 */}
+            {/* <GameBase side="ally" />
+        <GameBase side="enemy" /> */}
         </div>
     );
+
 
 }
 
