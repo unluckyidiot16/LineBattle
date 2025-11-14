@@ -589,7 +589,7 @@ export function GameCanvas() {
 
             // ★ 타일맵 3x3 로드 (64x64 타일)
             try {
-                const tileTex = await PIXI.Assets.load("/assets/Tilemap_Flat-green.png") as PIXI.Texture;
+                const tileTex = await PIXI.Assets.load("assets/Tilemap_Flat-green.png") as PIXI.Texture;
                 const source = tileTex.source;
                 const TILE = 64;
 
@@ -643,9 +643,9 @@ export function GameCanvas() {
             // ★ 성(본진) 텍스처 로드 + 스프라이트 생성
             try {
                 const [texAlly, texEnemy, texDestroyed] = await Promise.all([
-                    PIXI.Assets.load("/assets/Castle_Blue.png") as Promise<PIXI.Texture>,
-                    PIXI.Assets.load("/assets/Castle_Red.png") as Promise<PIXI.Texture>,
-                    PIXI.Assets.load("/assets/Castle_Destroyed.png") as Promise<PIXI.Texture>,
+                    PIXI.Assets.load("assets/Castle_Blue.png") as Promise<PIXI.Texture>,
+                    PIXI.Assets.load("assets/Castle_Red.png") as Promise<PIXI.Texture>,
+                    PIXI.Assets.load("assets/Castle_Destroyed.png") as Promise<PIXI.Texture>,
                 ]);
 
                 castleTexturesRef.current = {
