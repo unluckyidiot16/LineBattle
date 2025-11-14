@@ -220,6 +220,8 @@ export const UNIT_ANIMS: Record<
 /** 내부: 시트 → 텍스처 배열 캐시 */
 const textureCache = new Map<string, PIXI.Texture[]>();
 
+let assetsInitialized = false;  // ★ 추가
+
 function makeKey(def: AnimSheetDef): string {
     return `${def.src}|${def.frameWidth}x${def.frameHeight}|${def.frames}`;
 }
@@ -280,6 +282,15 @@ function resolveAnimDef(kind: UnitKind, anim: AnimName): AnimSheetDef | null {
 export async function preloadUnitAnims(): Promise<void> {
     const ids = Array.from(new Set(ALL_DEFS.map((d) => d.src)));
     if (!ids.length) return;
+
+    // ★ 한 번만 Pixi Assets basePath 설정
+    if (!assetsInitialized) {
+        const basePath = `${window.location.origin}${import.meta.env.BASE_URL}`.replace(/\/+$/, "") + "/";
+        await PIXI.Assets.init({
+            basePath,  // 예: http://localhost:5173/  또는 https://unluckyidiot16.github.io/LineBattle/
+        });
+        assetsInitialized = true;
+    }
 
     await PIXI.Assets.load(ids);
 }
