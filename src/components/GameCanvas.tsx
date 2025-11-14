@@ -100,7 +100,7 @@ export function GameCanvas() {
         (async () => {
             try {
                 // 경로는 실제 위치에 맞게 수정
-                const tex = await PIXI.Assets.load("/assets/Arrow.png");
+                const tex = await PIXI.Assets.load("assets/Arrow.png");
                 if (!cancelled) {
                     arrowTexRef.current = tex;
                 }
@@ -119,7 +119,7 @@ export function GameCanvas() {
 
         async function loadHealFrames() {
             // /public/assets/Heal_Effect.png 기준
-            const tex = (await PIXI.Assets.load("/assets/Heal_Effect.png")) as PIXI.Texture;
+            const tex = (await PIXI.Assets.load("assets/Heal_Effect.png")) as PIXI.Texture;
             if (cancelled) return;
 
             const source = tex.source;           // v8 기준 baseTexture 대신 source 사용
