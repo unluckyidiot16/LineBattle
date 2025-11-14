@@ -12,6 +12,14 @@ import {
     preloadUnitAnims,
 } from "../gfx/unitAnims";
 
+const BASE_URL = import.meta.env.BASE_URL ?? "/";
+
+function assetPath(rel: string): string {
+    const base = BASE_URL.replace(/\/$/, "");      // 끝 슬래시 제거
+    const clean = rel.replace(/^\/+/, "");         // 앞 슬래시 제거
+    return `${base}/${clean}`;                    // 예: "/LineBattle/assets/..." 또는 "/assets/..."
+}
+
 /** 유닛별 시각 상태(애니메이션 안정화용) */
 type UnitVisualState = {
     spawnTime: number;          // 스폰된 시각
@@ -100,7 +108,7 @@ export function GameCanvas() {
         (async () => {
             try {
                 // 경로는 실제 위치에 맞게 수정
-                const tex = await PIXI.Assets.load("assets/Arrow.png");
+                const tex = await PIXI.Assets.load(assetPath("assets/Arrow.png"));
                 if (!cancelled) {
                     arrowTexRef.current = tex;
                 }
@@ -119,7 +127,9 @@ export function GameCanvas() {
 
         async function loadHealFrames() {
             // /public/assets/Heal_Effect.png 기준
-            const tex = (await PIXI.Assets.load("assets/Heal_Effect.png")) as PIXI.Texture;
+            const tex = (await PIXI.Assets.load(
+                assetPath("assets/Heal_Effect.png")
+            )) as PIXI.Texture;
             if (cancelled) return;
 
             const source = tex.source;           // v8 기준 baseTexture 대신 source 사용
@@ -589,7 +599,9 @@ export function GameCanvas() {
 
             // ★ 타일맵 3x3 로드 (64x64 타일)
             try {
-                const tileTex = await PIXI.Assets.load("assets/Tilemap_Flat-green.png") as PIXI.Texture;
+                const tileTex = await PIXI.Assets.load(
+                    assetPath("assets/Tilemap_Flat-green.png")
+                ) as PIXI.Texture;
                 const source = tileTex.source;
                 const TILE = 64;
 
@@ -643,9 +655,9 @@ export function GameCanvas() {
             // ★ 성(본진) 텍스처 로드 + 스프라이트 생성
             try {
                 const [texAlly, texEnemy, texDestroyed] = await Promise.all([
-                    PIXI.Assets.load("assets/Castle_Blue.png") as Promise<PIXI.Texture>,
-                    PIXI.Assets.load("assets/Castle_Red.png") as Promise<PIXI.Texture>,
-                    PIXI.Assets.load("assets/Castle_Destroyed.png") as Promise<PIXI.Texture>,
+                    PIXI.Assets.load(assetPath("assets/Castle_Blue.png")) as Promise<PIXI.Texture>,
+                    PIXI.Assets.load(assetPath("assets/Castle_Red.png")) as Promise<PIXI.Texture>,
+                    PIXI.Assets.load(assetPath("assets/Castle_Destroyed.png")) as Promise<PIXI.Texture>,
                 ]);
 
                 castleTexturesRef.current = {

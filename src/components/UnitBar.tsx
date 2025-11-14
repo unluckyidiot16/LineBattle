@@ -2,6 +2,13 @@
 import React, { useState } from "react";
 import { useGameStore } from "../state/gameStore";
 
+const BASE_URL = import.meta.env.BASE_URL ?? "/";
+function assetPath(rel: string): string {
+    const base = BASE_URL.replace(/\/$/, "");
+    const clean = rel.replace(/^\/+/, "");
+    return `${base}/${clean}`;
+}
+
 const RARITIES = [
     { diff: 1, label: "C" },
     { diff: 2, label: "U" },
@@ -22,7 +29,7 @@ type FaceSprite = {
 // 예시: archer Idle 스프라이트
 // public/assets/units/archer/Archer_Idle.png 기준
 const archerIdle: FaceSprite = {
-    src: "assets/units/archer/Archer_Idle.png",
+    src: assetPath("assets/units/archer/Archer_Idle.png"),
     frameWidth: 192,
     frameHeight: 192,
     frames: 6,
