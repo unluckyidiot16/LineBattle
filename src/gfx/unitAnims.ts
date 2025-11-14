@@ -51,7 +51,7 @@ export const UNIT_ANIMS: Record<
     // Warrior (192x192, Idle 8 / Run 6 / Attack 4)
     warrior: {
         idle: collect({
-            src: "/assets/units/warrior/Warrior_Idle.png",
+            src: "assets/units/warrior/Warrior_Idle.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 8,
@@ -59,7 +59,7 @@ export const UNIT_ANIMS: Record<
             loop: true,
         }),
         run: collect({
-            src: "/assets/units/warrior/Warrior_Run.png",
+            src: "assets/units/warrior/Warrior_Run.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 6,
@@ -67,7 +67,7 @@ export const UNIT_ANIMS: Record<
             loop: true,
         }),
         attack: collect({
-            src: "/assets/units/warrior/Warrior_Attack.png",
+            src: "assets/units/warrior/Warrior_Attack.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 4,
@@ -79,7 +79,7 @@ export const UNIT_ANIMS: Record<
     // Lancer (320x320, Idle 12 / Run 6 / Attack 3)
     lancer: {
         idle: collect({
-            src: "/assets/units/lancer/Lancer_Idle.png",
+            src: "assets/units/lancer/Lancer_Idle.png",
             frameWidth: 320,
             frameHeight: 320,
             frames: 12,
@@ -87,7 +87,7 @@ export const UNIT_ANIMS: Record<
             loop: true,
         }),
         run: collect({
-            src: "/assets/units/lancer/Lancer_Run.png",
+            src: "assets/units/lancer/Lancer_Run.png",
             frameWidth: 320,
             frameHeight: 320,
             frames: 6,
@@ -95,7 +95,7 @@ export const UNIT_ANIMS: Record<
             loop: true,
         }),
         attack: collect({
-            src: "/assets/units/lancer/Lancer_Attack.png",
+            src: "assets/units/lancer/Lancer_Attack.png",
             frameWidth: 320,
             frameHeight: 320,
             frames: 3,
@@ -107,7 +107,7 @@ export const UNIT_ANIMS: Record<
     // Archer (192x192, Idle 6 / Run 4 / Attack 8)
     archer: {
         idle: collect({
-            src: "/assets/units/archer/Archer_Idle.png",
+            src: "assets/units/archer/Archer_Idle.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 6,
@@ -115,7 +115,7 @@ export const UNIT_ANIMS: Record<
             loop: true,
         }),
         run: collect({
-            src: "/assets/units/archer/Archer_Run.png",
+            src: "assets/units/archer/Archer_Run.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 4,
@@ -123,7 +123,7 @@ export const UNIT_ANIMS: Record<
             loop: true,
         }),
         attack: collect({
-            src: "/assets/units/archer/Archer_Attack.png",
+            src: "assets/units/archer/Archer_Attack.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 8,
@@ -135,7 +135,7 @@ export const UNIT_ANIMS: Record<
     // Healer (192x192, Idle 6 / Run 4 / Attack 11) - 공격 대신 힐 연출
     healer: {
         idle: collect({
-            src: "/assets/units/healer/Healer_Idle.png",
+            src: "assets/units/healer/Healer_Idle.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 6,
@@ -143,7 +143,7 @@ export const UNIT_ANIMS: Record<
             loop: true,
         }),
         run: collect({
-            src: "/assets/units/healer/Healer_Run.png",
+            src: "assets/units/healer/Healer_Run.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 4,
@@ -151,7 +151,7 @@ export const UNIT_ANIMS: Record<
             loop: true,
         }),
         attack: collect({
-            src: "/assets/units/healer/Healer_Attack.png",
+            src: "assets/units/healer/Healer_Attack.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 11,
@@ -163,7 +163,7 @@ export const UNIT_ANIMS: Record<
     // Pawn (192x192, Idle 6 / Run 6 / Attack 6)
     pawn: {
         idle: collect({
-            src: "/assets/units/pawn/Pawn_Idle.png",
+            src: "assets/units/pawn/Pawn_Idle.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 6,
@@ -171,7 +171,7 @@ export const UNIT_ANIMS: Record<
             loop: true,
         }),
         run: collect({
-            src: "/assets/units/pawn/Pawn_Run.png",
+            src: "assets/units/pawn/Pawn_Run.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 6,
@@ -179,7 +179,7 @@ export const UNIT_ANIMS: Record<
             loop: true,
         }),
         attack: collect({
-            src: "/assets/units/pawn/Pawn_Attack.png",
+            src: "assets/units/pawn/Pawn_Attack.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 6,
@@ -191,7 +191,7 @@ export const UNIT_ANIMS: Record<
     // PawnArcher (192x192, Idle 6 / Run 6 / Attack 8)
     pawnArcher: {
         idle: collect({
-            src: "/assets/units/pawnArcher/PawnArcher_Idle.png",
+            src: "assets/units/pawnArcher/PawnArcher_Idle.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 6,
@@ -199,7 +199,7 @@ export const UNIT_ANIMS: Record<
             loop: true,
         }),
         run: collect({
-            src: "/assets/units/pawnArcher/PawnArcher_Run.png",
+            src: "assets/units/pawnArcher/PawnArcher_Run.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 6,
@@ -207,7 +207,7 @@ export const UNIT_ANIMS: Record<
             loop: true,
         }),
         attack: collect({
-            src: "/assets/units/pawnArcher/PawnArcher_Attack.png",
+            src: "assets/units/pawnArcher/PawnArcher_Attack.png",
             frameWidth: 192,
             frameHeight: 192,
             frames: 8,
