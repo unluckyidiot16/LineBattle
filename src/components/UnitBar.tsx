@@ -22,7 +22,7 @@ type FaceSprite = {
 // 예시: archer Idle 스프라이트
 // public/assets/units/archer/Archer_Idle.png 기준
 const archerIdle: FaceSprite = {
-    src: "/assets/units/archer/Archer_Idle.png",
+    src: "assets/units/archer/Archer_Idle.png",
     frameWidth: 192,
     frameHeight: 192,
     frames: 6,
